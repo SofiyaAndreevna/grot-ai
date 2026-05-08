@@ -1,0 +1,135 @@
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+  background: #202123;
+  color: #ececf1;
+}
+
+.sidebar {
+  border-right: 1px solid #2f2f33;
+  background: #171717;
+  padding: 16px 12px;
+}
+
+.sidebar-header h1 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+
+.folder-block {
+  margin-bottom: 18px;
+}
+
+.folder-name {
+  font-size: 12px;
+  color: #9f9fa8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+}
+
+.chat-link {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #ececf1;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.chat-link:hover {
+  background: #2a2b32;
+}
+
+.chat-link.active {
+  background: #343541;
+  border-color: #4d4f5b;
+}
+
+.chat-area {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.chat-header {
+  border-bottom: 1px solid #2f2f33;
+  padding: 16px 24px;
+}
+
+.chat-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.messages {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.message {
+  max-width: 80%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  line-height: 1.4;
+}
+
+.message.user {
+  align-self: flex-end;
+  background: #10a37f;
+  color: #ffffff;
+}
+
+.message.assistant {
+  align-self: flex-start;
+  background: #2f3138;
+  color: #ececf1;
+}
+
+.chat-form {
+  border-top: 1px solid #2f2f33;
+  padding: 16px 24px;
+  display: flex;
+  gap: 10px;
+}
+
+.chat-form input {
+  flex: 1;
+  background: #2f3138;
+  border: 1px solid #4d4f5b;
+  color: #ececf1;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+}
+
+.chat-form button {
+  border: 1px solid #10a37f;
+  background: #10a37f;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.chat-form button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid #2f2f33;
+  }
+}
