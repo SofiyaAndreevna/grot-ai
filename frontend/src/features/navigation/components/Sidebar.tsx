@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import type { Epic, EpicChat } from '../../chat/types'
 import type { ProjectSection } from '../constants'
 
@@ -20,6 +22,23 @@ export const Sidebar = ({
   activeChatId,
   onSelectEpicAndChat,
 }: SidebarProps) => {
+  const [expandedEpicIds, setExpandedEpicIds] = useState<Set<string>>(() => new Set([activeEpicId]))
+
+  const handleEpicClick = (epic: Epic) => {
+    onSelectEpicAndChat(epic)
+    setExpandedEpicIds((previousExpandedEpics) => {
+      const nextExpandedEpics = new Set(previousExpandedEpics)
+
+      if (nextExpandedEpics.has(epic.id)) {
+        nextExpandedEpics.delete(epic.id)
+      } else {
+        nextExpandedEpics.add(epic.id)
+      }
+
+      return nextExpandedEpics
+    })
+  }
+
   return (
     <aside className="sidebar">
       <div className="workspace-brand">
@@ -42,30 +61,36 @@ export const Sidebar = ({
       {activeProjectSection === 'Обзор проекта' && (
         <div className="epics-area">
           <p className="section-label">Эпики</p>
-          {epics.map((epic) => (
-            <div key={epic.id} className="epic-block">
+          {epics.map((epic) => {
+            const isExpanded = expandedEpicIds.has(epic.id)
+
+            return (
+              <div key={epic.id} className="epic-block">
               <button
                 type="button"
-                onClick={() => onSelectEpicAndChat(epic)}
+                onClick={() => handleEpicClick(epic)}
                 className={`epic-title ${activeEpicId === epic.id ? 'active' : ''}`}
               >
-                <span className="chevron">▾</span> {epic.title}
+                <span className="chevron">{isExpanded ? '▾' : '▸'}</span> {epic.title}
               </button>
 
-              <div className="epic-chats">
-                {epic.chats.map((chat) => (
-                  <button
-                    key={chat.id}
-                    type="button"
-                    onClick={() => onSelectEpicAndChat(epic, chat)}
-                    className={`chat-link ${activeChatId === chat.id ? 'active' : ''}`}
-                  >
-                    • {chat.title}
-                  </button>
-                ))}
-              </div>
+              {isExpanded && (
+                <div className="epic-chats">
+                  {epic.chats.map((chat) => (
+                    <button
+                      key={chat.id}
+                      type="button"
+                      onClick={() => onSelectEpicAndChat(epic, chat)}
+                      className={`chat-link ${activeChatId === chat.id ? 'active' : ''}`}
+                    >
+                      • {chat.title}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
+            )
+          })}
 
           <button type="button" className="add-action">
             + Новый эпик
