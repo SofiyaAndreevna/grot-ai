@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-import type { Epic, EpicChat } from '../../chat/types'
+import type { Epic, EpicChat } from '@/features/chat'
 import type { ProjectSection } from '../constants'
 
 type SidebarProps = {

@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import './App.css'
-import { AppContent } from './features/app-content/components/AppContent'
-import { epics } from './features/chat/constants'
-import type { Epic, EpicChat } from './features/chat/types'
-import { Sidebar } from './features/navigation/components/Sidebar'
-import { projectSections } from './features/navigation/constants'
-import type { ProjectSection } from './features/navigation/constants'
+import { AppContent } from '@/features/app-content'
+import { epics } from '@/features/chat'
+import type { Epic, EpicChat } from '@/features/chat'
+import { Sidebar } from '@/features/navigation'
+import { projectSections } from '@/features/navigation'
+import type { ProjectSection } from '@/features/navigation'
 import {
   buildChatPath,
   contextPath,
@@ -15,7 +15,7 @@ import {
   isContextSection,
   isOverviewSection,
   resolveRouteState,
-} from './features/navigation/routing'
+} from '@/features/navigation'
 
 function App() {
   const location = useLocation()

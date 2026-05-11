@@ -1,4 +1,4 @@
-import { epics } from '../chat/constants'
+import { epics } from '@/features/chat'
 import type { ProjectSection } from './constants'
 
 const overviewSection: ProjectSection = 'Обзор проекта'

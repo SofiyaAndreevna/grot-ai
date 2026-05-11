@@ -1,9 +1,7 @@
-import { ChatArea } from '../../chat/components/ChatArea'
-import { useChatState } from '../../chat/hooks/useChatState'
-import { ContextScreen } from '../../context/components/ContextScreen'
-import { useProjectContext } from '../../context/hooks/useProjectContext'
-import type { ProjectSection } from '../../navigation/constants'
-import { isContextSection } from '../../navigation/routing'
+import { ChatArea, useChatState } from '@/features/chat'
+import { ContextScreen, useProjectContext } from '@/features/context'
+import type { ProjectSection } from '@/features/navigation'
+import { isContextSection } from '@/features/navigation'
 
 type AppContentProps = {
   activeProjectSection: ProjectSection
