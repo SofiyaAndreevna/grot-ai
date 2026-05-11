@@ -1,19 +1,49 @@
 import { useState } from 'react'
+import { useEffect } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { buildInitialContextByType } from '../constants'
 import { contextTypes } from '../types'
 import type { ContextRecord, ContextType, UploadedContextFile } from '../types'
 
-export const useProjectContext = () => {
+type UseProjectContextParams = {
+  projectId: string
+}
+
+export const useProjectContext = ({ projectId }: UseProjectContextParams) => {
   const [activeContextType, setActiveContextType] = useState<ContextType>(contextTypes[0])
-  const [contextByType, setContextByType] =
-    useState<Record<ContextType, ContextRecord[]>>(buildInitialContextByType)
+  const [projectContextByType, setProjectContextByType] = useState<
+    Record<string, Record<ContextType, ContextRecord[]>>
+  >(() => ({
+    [projectId]: buildInitialContextByType(),
+  }))
   const [editingContextId, setEditingContextId] = useState<string | null>(null)
   const [contextTitle, setContextTitle] = useState('')
   const [contextContent, setContextContent] = useState('')
   const [contextFiles, setContextFiles] = useState<UploadedContextFile[]>([])
 
+  useEffect(() => {
+    setProjectContextByType((prev) => {
+      if (prev[projectId]) {
+        return prev
+      }
+
+      return {
+        ...prev,
+        [projectId]: buildInitialContextByType(),
+      }
+    })
+  }, [projectId])
+
+  useEffect(() => {
+    setActiveContextType(contextTypes[0])
+    setEditingContextId(null)
+    setContextTitle('')
+    setContextContent('')
+    setContextFiles([])
+  }, [projectId])
+
+  const contextByType = projectContextByType[projectId] ?? buildInitialContextByType()
   const activeTypeRecords = contextByType[activeContextType] ?? []
 
   const clearContextEditor = () => {
@@ -73,8 +103,9 @@ export const useProjectContext = () => {
 
     const updatedAt = new Date().toLocaleDateString('ru-RU')
 
-    setContextByType((prev) => {
-      const records = prev[activeContextType] ?? []
+    setProjectContextByType((prev) => {
+      const projectRecords = prev[projectId] ?? buildInitialContextByType()
+      const records = projectRecords[activeContextType] ?? []
       const nextRecords = editingContextId
         ? records.map((record) =>
             record.id === editingContextId
@@ -100,7 +131,10 @@ export const useProjectContext = () => {
 
       return {
         ...prev,
-        [activeContextType]: nextRecords,
+        [projectId]: {
+          ...projectRecords,
+          [activeContextType]: nextRecords,
+        },
       }
     })
 

@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 
-import { buildInitialMessagesByChat, fallbackAssistantMessage } from '../constants'
+import { buildChatKey, buildInitialMessagesByChat, fallbackAssistantMessage } from '../constants'
 import type { ChatMessage, ChatMode } from '../types'
 
 type UseChatStateParams = {
+  activeProjectId: string
   activeChatId: string
   activeChatTitle: string
   activeEpicTitle: string
 }
 
 export const useChatState = ({
+  activeProjectId,
   activeChatId,
   activeChatTitle,
   activeEpicTitle,
@@ -20,8 +22,9 @@ export const useChatState = ({
   const [messagesByChat, setMessagesByChat] =
     useState<Record<string, ChatMessage[]>>(buildInitialMessagesByChat)
   const [isLoading, setIsLoading] = useState(false)
+  const activeChatKey = buildChatKey(activeProjectId, activeChatId)
 
-  const activeChatMessages = messagesByChat[activeChatId] ?? [fallbackAssistantMessage]
+  const activeChatMessages = messagesByChat[activeChatKey] ?? [fallbackAssistantMessage]
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -31,7 +34,7 @@ export const useChatState = ({
       return
     }
 
-    const targetChatId = activeChatId
+    const targetChatKey = buildChatKey(activeProjectId, activeChatId)
     const targetChatTitle = activeChatTitle
     const targetEpicTitle = activeEpicTitle
 
@@ -43,7 +46,7 @@ export const useChatState = ({
 
     setMessagesByChat((prev) => ({
       ...prev,
-      [targetChatId]: [...(prev[targetChatId] ?? []), userMessage],
+      [targetChatKey]: [...(prev[targetChatKey] ?? []), userMessage],
     }))
     setInput('')
     setIsLoading(true)
@@ -76,13 +79,13 @@ export const useChatState = ({
 
       setMessagesByChat((prev) => ({
         ...prev,
-        [targetChatId]: [...(prev[targetChatId] ?? []), assistantMessage],
+        [targetChatKey]: [...(prev[targetChatKey] ?? []), assistantMessage],
       }))
     } catch {
       setMessagesByChat((prev) => ({
         ...prev,
-        [targetChatId]: [
-          ...(prev[targetChatId] ?? []),
+        [targetChatKey]: [
+          ...(prev[targetChatKey] ?? []),
           {
             id: crypto.randomUUID(),
             role: 'assistant',

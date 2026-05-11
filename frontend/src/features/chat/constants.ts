@@ -1,6 +1,6 @@
-import type { ChatMessage, Epic } from './types'
+import type { ChatMessage, Epic, Project } from './types'
 
-export const epics: Epic[] = [
+const systemLensEpics: Epic[] = [
   {
     id: 'registration',
     title: 'Регистрация',
@@ -29,6 +29,31 @@ export const epics: Epic[] = [
   },
 ]
 
+const mattEpics: Epic[] = [
+  {
+    id: 'razgovor',
+    title: 'Разговор',
+    chats: [{ id: 'govorim', title: 'Говорим' }],
+  },
+]
+
+export const seedProjects: Project[] = [
+  {
+    id: 'systemlens',
+    title: 'SystemLens',
+    description: 'Базовый проект продукта SystemLens.',
+    epics: systemLensEpics,
+  },
+  {
+    id: 'matt',
+    title: 'Matt',
+    description: 'Сидовый проект для теста мультипроектности.',
+    epics: mattEpics,
+  },
+]
+
+export const defaultProjectId = seedProjects[0]?.id ?? 'systemlens'
+
 export const fallbackAssistantMessage: ChatMessage = {
   id: 'default-assistant-message',
   role: 'assistant',
@@ -41,9 +66,15 @@ const createInitialAssistantMessage = (): ChatMessage => ({
   text: fallbackAssistantMessage.text,
 })
 
-const allChatIds = epics.flatMap((epic) => epic.chats.map((chat) => chat.id))
+const buildChatStorageKey = (projectId: string, chatId: string) => `${projectId}:${chatId}`
+
+const allChatKeys = seedProjects.flatMap((project) =>
+  project.epics.flatMap((epic) => epic.chats.map((chat) => buildChatStorageKey(project.id, chat.id))),
+)
 
 export const buildInitialMessagesByChat = () =>
   Object.fromEntries(
-    allChatIds.map((chatId) => [chatId, [createInitialAssistantMessage()]]),
+    allChatKeys.map((chatKey) => [chatKey, [createInitialAssistantMessage()]]),
   ) as Record<string, ChatMessage[]>
+
+export const buildChatKey = (projectId: string, chatId: string) => `${projectId}:${chatId}`

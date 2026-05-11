@@ -4,6 +4,7 @@ import type { ProjectSection } from '@/features/navigation'
 import { isContextSection } from '@/features/navigation'
 
 type AppContentProps = {
+  activeProjectId: string
   activeProjectSection: ProjectSection
   activeEpicTitle: string
   activeChatId: string
@@ -11,6 +12,7 @@ type AppContentProps = {
 }
 
 export const AppContent = ({
+  activeProjectId,
   activeProjectSection,
   activeEpicTitle,
   activeChatId,
@@ -18,6 +20,7 @@ export const AppContent = ({
 }: AppContentProps) => {
   const { chatMode, setChatMode, input, setInput, isLoading, activeChatMessages, handleSubmit } =
     useChatState({
+      activeProjectId,
       activeChatId,
       activeChatTitle,
       activeEpicTitle,
@@ -38,7 +41,7 @@ export const AppContent = ({
     removeContextFile,
     handleContextSubmit,
     switchContextType,
-  } = useProjectContext()
+  } = useProjectContext({ projectId: activeProjectId })
 
   if (isContextSection(activeProjectSection)) {
     return (

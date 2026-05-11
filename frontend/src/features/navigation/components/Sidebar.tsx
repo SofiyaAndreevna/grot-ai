@@ -1,9 +1,19 @@
 import { useState } from 'react'
+import type { FormEvent } from 'react'
 
-import type { Epic, EpicChat } from '@/features/chat'
+import type { Epic, EpicChat, Project } from '@/features/chat'
 import type { ProjectSection } from '../constants'
 
+export type NewProjectPayload = {
+  title: string
+  description: string
+}
+
 type SidebarProps = {
+  projects: Project[]
+  activeProjectId: string
+  onProjectChange: (project: Project) => void
+  onAddProject: (payload: NewProjectPayload) => void
   projectSections: readonly ProjectSection[]
   activeProjectSection: ProjectSection
   onProjectSectionChange: (section: ProjectSection) => void
@@ -14,6 +24,10 @@ type SidebarProps = {
 }
 
 export const Sidebar = ({
+  projects,
+  activeProjectId,
+  onProjectChange,
+  onAddProject,
   projectSections,
   activeProjectSection,
   onProjectSectionChange,
@@ -23,6 +37,9 @@ export const Sidebar = ({
   onSelectEpicAndChat,
 }: SidebarProps) => {
   const [expandedEpicIds, setExpandedEpicIds] = useState<Set<string>>(() => new Set([activeEpicId]))
+  const [isProjectFormOpen, setIsProjectFormOpen] = useState(false)
+  const [projectName, setProjectName] = useState('')
+  const [projectDescription, setProjectDescription] = useState('')
 
   const handleEpicClick = (epic: Epic) => {
     onSelectEpicAndChat(epic)
@@ -39,10 +56,84 @@ export const Sidebar = ({
     })
   }
 
+  const resetProjectForm = () => {
+    setProjectName('')
+    setProjectDescription('')
+    setIsProjectFormOpen(false)
+  }
+
+  const handleProjectSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const trimmedName = projectName.trim()
+    const trimmedDescription = projectDescription.trim()
+
+    if (!trimmedName) {
+      return
+    }
+
+    onAddProject({
+      title: trimmedName,
+      description: trimmedDescription,
+    })
+    resetProjectForm()
+  }
+
   return (
     <aside className="sidebar">
       <div className="workspace-brand">
         <h1>SystemLens</h1>
+      </div>
+
+      <div className="projects-area">
+        <p className="section-label">Проекты</p>
+        <div className="project-list">
+          {projects.map((project) => (
+            <button
+              key={project.id}
+              type="button"
+              className={`project-switch ${activeProjectId === project.id ? 'active' : ''}`}
+              onClick={() => onProjectChange(project)}
+            >
+              {project.title}
+            </button>
+          ))}
+        </div>
+
+        {!isProjectFormOpen && (
+          <button type="button" className="add-action" onClick={() => setIsProjectFormOpen(true)}>
+            + Добавить проект
+          </button>
+        )}
+
+        {isProjectFormOpen && (
+          <form className="project-form" onSubmit={handleProjectSubmit}>
+            <label>
+              Название проекта
+              <input
+                value={projectName}
+                onChange={(event) => setProjectName(event.target.value)}
+                placeholder="Например: Payments Team"
+              />
+            </label>
+            <label>
+              Описание
+              <textarea
+                value={projectDescription}
+                onChange={(event) => setProjectDescription(event.target.value)}
+                placeholder="Кратко опишите проект"
+                rows={3}
+              />
+            </label>
+            <div className="project-form-actions">
+              <button type="submit" disabled={!projectName.trim()}>
+                Добавить проект
+              </button>
+              <button type="button" className="ghost-button" onClick={resetProjectForm}>
+                Отмена
+              </button>
+            </div>
+          </form>
+        )}
       </div>
 
       <div className="project-nav">
@@ -91,13 +182,6 @@ export const Sidebar = ({
               </div>
             )
           })}
-
-          <button type="button" className="add-action">
-            + Новый эпик
-          </button>
-          <button type="button" className="add-action">
-            + Новый чат
-          </button>
         </div>
       )}
     </aside>
