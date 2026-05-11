@@ -1,159 +1,95 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
+
 import './App.css'
-
-type ChatMessage = {
-  id: string
-  role: 'user' | 'assistant'
-  text: string
-}
-
-type ChatTopic = {
-  id: string
-  folder: string
-  title: string
-}
-
-const topics: ChatTopic[] = [
-  { id: 'frontend-ideas', folder: 'Проект', title: 'Идеи по frontend' },
-  { id: 'backend-api', folder: 'Проект', title: 'Вопросы по backend API' },
-  { id: 'interview-prep', folder: 'Личное', title: 'Подготовка к интервью' },
-]
+import { epics } from './features/chat/constants'
+import { ChatArea } from './features/chat/components/ChatArea'
+import { useChatState } from './features/chat/hooks/useChatState'
+import type { Epic, EpicChat } from './features/chat/types'
+import { ContextScreen } from './features/context/components/ContextScreen'
+import { useProjectContext } from './features/context/hooks/useProjectContext'
+import { Sidebar } from './features/navigation/components/Sidebar'
+import { projectSections } from './features/navigation/constants'
+import type { ProjectSection } from './features/navigation/constants'
 
 function App() {
-  const [activeTopicId, setActiveTopicId] = useState(topics[0].id)
-  const [input, setInput] = useState('')
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      text: 'Привет! Выбери тему слева и задай вопрос, я отправлю его на backend.',
-    },
-  ])
-  const [isLoading, setIsLoading] = useState(false)
+  const [activeProjectSection, setActiveProjectSection] = useState<ProjectSection>(projectSections[1])
+  const [activeEpicId, setActiveEpicId] = useState(epics[0].id)
+  const [activeChatId, setActiveChatId] = useState(epics[0].chats[0].id)
 
-  const activeTopic = topics.find((topic) => topic.id === activeTopicId) ?? topics[0]
+  const activeEpic = epics.find((epic) => epic.id === activeEpicId) ?? epics[0]
+  const activeChat = activeEpic.chats.find((chat) => chat.id === activeChatId) ?? activeEpic.chats[0]
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const { chatMode, setChatMode, input, setInput, isLoading, activeChatMessages, handleSubmit } =
+    useChatState({
+      activeChatId: activeChat.id,
+      activeChatTitle: activeChat.title,
+      activeEpicTitle: activeEpic.title,
+    })
 
-    const trimmedInput = input.trim()
-    if (!trimmedInput || isLoading) {
-      return
-    }
+  const {
+    activeContextType,
+    activeTypeRecords,
+    editingContextId,
+    contextTitle,
+    setContextTitle,
+    contextContent,
+    setContextContent,
+    contextFiles,
+    clearContextEditor,
+    startEditingContextRecord,
+    handleFilesSelected,
+    removeContextFile,
+    handleContextSubmit,
+    switchContextType,
+  } = useProjectContext()
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      text: trimmedInput,
-    }
-
-    setMessages((prev) => [...prev, userMessage])
-    setInput('')
-    setIsLoading(true)
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: trimmedInput,
-          topic: activeTopic.title,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to get response from server')
-      }
-
-      const data = (await response.json()) as { reply?: string }
-      const assistantMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        text: data.reply ?? 'Сервер вернул пустой ответ',
-      }
-
-      setMessages((prev) => [...prev, assistantMessage])
-    } catch (error) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          text: 'Не удалось связаться с backend. Проверь, запущен ли сервер.',
-        },
-      ])
-    } finally {
-      setIsLoading(false)
-    }
+  const selectEpicAndChat = (epic: Epic, chat?: EpicChat) => {
+    setActiveEpicId(epic.id)
+    setActiveChatId((chat ?? epic.chats[0]).id)
   }
 
   return (
     <main className="layout">
-      <aside className="sidebar">
-        <div className="sidebar-header">
-          <h1>Папки</h1>
-        </div>
-        <div className="folder-block">
-          <p className="folder-name">Проект</p>
-          {topics
-            .filter((topic) => topic.folder === 'Проект')
-            .map((topic) => (
-              <button
-                key={topic.id}
-                type="button"
-                onClick={() => setActiveTopicId(topic.id)}
-                className={`chat-link ${activeTopicId === topic.id ? 'active' : ''}`}
-              >
-                {topic.title}
-              </button>
-            ))}
-        </div>
-        <div className="folder-block">
-          <p className="folder-name">Личное</p>
-          {topics
-            .filter((topic) => topic.folder === 'Личное')
-            .map((topic) => (
-              <button
-                key={topic.id}
-                type="button"
-                onClick={() => setActiveTopicId(topic.id)}
-                className={`chat-link ${activeTopicId === topic.id ? 'active' : ''}`}
-              >
-                {topic.title}
-              </button>
-            ))}
-        </div>
-      </aside>
+      <Sidebar
+        projectSections={projectSections}
+        activeProjectSection={activeProjectSection}
+        onProjectSectionChange={setActiveProjectSection}
+        epics={epics}
+        activeEpicId={activeEpicId}
+        activeChatId={activeChatId}
+        onSelectEpicAndChat={selectEpicAndChat}
+      />
 
-      <section className="chat-area">
-        <header className="chat-header">
-          <h2>{activeTopic.title}</h2>
-        </header>
-
-        <div className="messages">
-          {messages.map((message) => (
-            <div key={message.id} className={`message ${message.role}`}>
-              {message.text}
-            </div>
-          ))}
-          {isLoading && <div className="message assistant">Печатает...</div>}
-        </div>
-
-        <form className="chat-form" onSubmit={handleSubmit}>
-          <input
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Введите вопрос по выбранной теме..."
-            disabled={isLoading}
-          />
-          <button type="submit" disabled={isLoading || !input.trim()}>
-            Отправить
-          </button>
-        </form>
-      </section>
+      {activeProjectSection === 'Контекст проекта' ? (
+        <ContextScreen
+          activeContextType={activeContextType}
+          activeTypeRecords={activeTypeRecords}
+          editingContextId={editingContextId}
+          contextTitle={contextTitle}
+          onContextTitleChange={setContextTitle}
+          contextContent={contextContent}
+          onContextContentChange={setContextContent}
+          contextFiles={contextFiles}
+          onFilesSelected={handleFilesSelected}
+          onRemoveFile={removeContextFile}
+          onSubmit={handleContextSubmit}
+          onSwitchContextType={switchContextType}
+          onResetEditor={clearContextEditor}
+          onEditRecord={startEditingContextRecord}
+        />
+      ) : (
+        <ChatArea
+          activeEpicTitle={activeEpic.title}
+          activeChatTitle={activeChat.title}
+          chatMode={chatMode}
+          onChatModeChange={setChatMode}
+          messages={activeChatMessages}
+          isLoading={isLoading}
+          input={input}
+          onInputChange={setInput}
+          onSubmit={handleSubmit}
+        />
+      )}
     </main>
   )
 }
