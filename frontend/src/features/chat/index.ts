@@ -1,4 +1,10 @@
 export { ChatArea } from './components/ChatArea'
-export { epics, fallbackAssistantMessage, buildInitialMessagesByChat } from './constants'
+export {
+  seedProjects,
+  defaultProjectId,
+  fallbackAssistantMessage,
+  buildInitialMessagesByChat,
+  buildChatKey,
+} from './constants'
 export { useChatState } from './hooks/useChatState'
-export type { ChatMessage, ChatMode, Epic, EpicChat } from './types'
+export type { ChatMessage, ChatMode, Epic, EpicChat, Project } from './types'

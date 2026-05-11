@@ -16,4 +16,11 @@ export type Epic = {
   chats: EpicChat[]
 }
 
+export type Project = {
+  id: string
+  title: string
+  description: string
+  epics: Epic[]
+}
+
 export type ChatMode = 'analyst' | 'developer'
