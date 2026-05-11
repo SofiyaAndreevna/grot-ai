@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import type { Epic, EpicChat } from '../../chat/types'
 import type { ProjectSection } from '../constants'
@@ -23,18 +23,6 @@ export const Sidebar = ({
   onSelectEpicAndChat,
 }: SidebarProps) => {
   const [expandedEpicIds, setExpandedEpicIds] = useState<Set<string>>(() => new Set([activeEpicId]))
-
-  useEffect(() => {
-    setExpandedEpicIds((previousExpandedEpics) => {
-      if (previousExpandedEpics.has(activeEpicId)) {
-        return previousExpandedEpics
-      }
-
-      const nextExpandedEpics = new Set(previousExpandedEpics)
-      nextExpandedEpics.add(activeEpicId)
-      return nextExpandedEpics
-    })
-  }, [activeEpicId])
 
   const handleEpicClick = (epic: Epic) => {
     onSelectEpicAndChat(epic)
@@ -74,7 +62,7 @@ export const Sidebar = ({
         <div className="epics-area">
           <p className="section-label">Эпики</p>
           {epics.map((epic) => {
-            const isExpanded = expandedEpicIds.has(epic.id)
+            const isExpanded = expandedEpicIds.has(epic.id) || activeEpicId === epic.id
 
             return (
               <div key={epic.id} className="epic-block">
