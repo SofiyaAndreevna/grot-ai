@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import './App.css'
 import { epics } from './features/chat/constants'
@@ -10,14 +11,24 @@ import { useProjectContext } from './features/context/hooks/useProjectContext'
 import { Sidebar } from './features/navigation/components/Sidebar'
 import { projectSections } from './features/navigation/constants'
 import type { ProjectSection } from './features/navigation/constants'
+import {
+  buildChatPath,
+  contextPath,
+  defaultChatPath,
+  isContextSection,
+  isOverviewSection,
+  resolveRouteState,
+} from './features/navigation/routing'
 
 function App() {
-  const [activeProjectSection, setActiveProjectSection] = useState<ProjectSection>(projectSections[1])
-  const [activeEpicId, setActiveEpicId] = useState(epics[0].id)
-  const [activeChatId, setActiveChatId] = useState(epics[0].chats[0].id)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [lastChatPath, setLastChatPath] = useState(defaultChatPath)
+  const routeState = useMemo(() => resolveRouteState(location.pathname), [location.pathname])
 
-  const activeEpic = epics.find((epic) => epic.id === activeEpicId) ?? epics[0]
-  const activeChat = activeEpic.chats.find((chat) => chat.id === activeChatId) ?? activeEpic.chats[0]
+  const activeProjectSection = routeState.section
+  const activeEpic = epics.find((epic) => epic.id === routeState.epicId) ?? epics[0]
+  const activeChat = activeEpic.chats.find((chat) => chat.id === routeState.chatId) ?? activeEpic.chats[0]
 
   const { chatMode, setChatMode, input, setInput, isLoading, activeChatMessages, handleSubmit } =
     useChatState({
@@ -43,9 +54,35 @@ function App() {
     switchContextType,
   } = useProjectContext()
 
+  useEffect(() => {
+    if (isOverviewSection(activeProjectSection)) {
+      const path = buildChatPath(activeEpic.id, activeChat.id)
+      setLastChatPath(path)
+
+      if (location.pathname !== path) {
+        navigate(path, { replace: true })
+      }
+    }
+  }, [activeChat.id, activeEpic.id, activeProjectSection, location.pathname, navigate])
+
+  useEffect(() => {
+    if (isContextSection(activeProjectSection) && location.pathname !== contextPath) {
+      navigate(contextPath, { replace: true })
+    }
+  }, [activeProjectSection, location.pathname, navigate])
+
+  const handleProjectSectionChange = (section: ProjectSection) => {
+    if (isContextSection(section)) {
+      navigate(contextPath)
+      return
+    }
+
+    navigate(lastChatPath)
+  }
+
   const selectEpicAndChat = (epic: Epic, chat?: EpicChat) => {
-    setActiveEpicId(epic.id)
-    setActiveChatId((chat ?? epic.chats[0]).id)
+    const nextChat = chat ?? epic.chats[0]
+    navigate(buildChatPath(epic.id, nextChat.id))
   }
 
   return (
@@ -53,14 +90,14 @@ function App() {
       <Sidebar
         projectSections={projectSections}
         activeProjectSection={activeProjectSection}
-        onProjectSectionChange={setActiveProjectSection}
+        onProjectSectionChange={handleProjectSectionChange}
         epics={epics}
-        activeEpicId={activeEpicId}
-        activeChatId={activeChatId}
+        activeEpicId={activeEpic.id}
+        activeChatId={activeChat.id}
         onSelectEpicAndChat={selectEpicAndChat}
       />
 
-      {activeProjectSection === 'Контекст проекта' ? (
+      {isContextSection(activeProjectSection) ? (
         <ContextScreen
           activeContextType={activeContextType}
           activeTypeRecords={activeTypeRecords}
