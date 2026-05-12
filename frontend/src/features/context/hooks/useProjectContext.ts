@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useEffect } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { buildInitialContextByType } from '../constants'
@@ -21,27 +20,6 @@ export const useProjectContext = ({ projectId }: UseProjectContextParams) => {
   const [contextTitle, setContextTitle] = useState('')
   const [contextContent, setContextContent] = useState('')
   const [contextFiles, setContextFiles] = useState<UploadedContextFile[]>([])
-
-  useEffect(() => {
-    setProjectContextByType((prev) => {
-      if (prev[projectId]) {
-        return prev
-      }
-
-      return {
-        ...prev,
-        [projectId]: buildInitialContextByType(),
-      }
-    })
-  }, [projectId])
-
-  useEffect(() => {
-    setActiveContextType(contextTypes[0])
-    setEditingContextId(null)
-    setContextTitle('')
-    setContextContent('')
-    setContextFiles([])
-  }, [projectId])
 
   const contextByType = projectContextByType[projectId] ?? buildInitialContextByType()
   const activeTypeRecords = contextByType[activeContextType] ?? []

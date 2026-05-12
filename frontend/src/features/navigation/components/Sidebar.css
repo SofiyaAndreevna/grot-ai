@@ -1,0 +1,299 @@
+.sidebar {
+  border-right: 1px solid #262c3b;
+  background: #10141e;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.workspace-brand h1 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0.01em;
+}
+
+.projects-area {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-switch {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #c9cfdd;
+  text-align: left;
+  padding: 9px 10px;
+  cursor: pointer;
+}
+
+.project-switch:hover {
+  background: #1b2232;
+}
+
+.project-switch.active {
+  border-color: #2d4a91;
+  background: #182440;
+  color: #eff3ff;
+}
+
+.project-form {
+  border: 1px solid #2b3345;
+  border-radius: 10px;
+  background: #1b2232;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #d8e0f1;
+  font-size: 13px;
+}
+
+.project-form input,
+.project-form textarea {
+  width: 100%;
+  border: 1px solid #40557f;
+  background: #222b3d;
+  color: #e8ebf2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.project-form textarea {
+  resize: vertical;
+}
+
+.project-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.project-form-actions button {
+  border: 1px solid #2576ff;
+  background: #2576ff;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.project-form-actions .ghost-button {
+  border-color: #40557f;
+  background: transparent;
+  color: #d6deef;
+}
+
+.project-form-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.project-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-link {
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #c9cfdd;
+  text-align: left;
+  padding: 9px 10px;
+  cursor: pointer;
+}
+
+.project-link:hover {
+  background: #1b2232;
+}
+
+.project-link.active {
+  border-color: #2d4a91;
+  background: #182440;
+  color: #eff3ff;
+}
+
+.epics-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-label {
+  margin: 2px 0 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #8e99b1;
+}
+
+.epic-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.epic-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.epic-title {
+  flex: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #d7deef;
+  border-radius: 8px;
+  text-align: left;
+  padding: 8px 9px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.epic-title.active,
+.epic-title:hover {
+  background: #1a2233;
+}
+
+.chevron {
+  color: #9eacd3;
+}
+
+.epic-chats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.epic-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.epic-action-button {
+  border: 1px solid #3b4868;
+  background: transparent;
+  color: #cfd8ee;
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.epic-action-button:hover {
+  background: #202a3d;
+}
+
+.epic-action-button.danger {
+  color: #f0a7af;
+}
+
+.epic-form,
+.epic-edit-form {
+  border: 1px solid #2b3345;
+  border-radius: 10px;
+  background: #1b2232;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.epic-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #d8e0f1;
+  font-size: 13px;
+}
+
+.epic-form input,
+.epic-edit-form input {
+  width: 100%;
+  border: 1px solid #40557f;
+  background: #222b3d;
+  color: #e8ebf2;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.epic-form-actions,
+.epic-edit-form {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.epic-form-actions button,
+.epic-edit-form button {
+  border: 1px solid #2576ff;
+  background: #2576ff;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.epic-form-actions .ghost-button,
+.epic-edit-form .ghost-button {
+  border-color: #40557f;
+  background: transparent;
+  color: #d6deef;
+}
+
+.epic-form-actions button:disabled,
+.epic-edit-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chat-link {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: #c9cfdd;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.chat-link:hover {
+  background: #202a3d;
+}
+
+.chat-link.active {
+  background: #243149;
+  border-color: #35558f;
+  color: #f3f6fd;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid #262c3b;
+  }
+}

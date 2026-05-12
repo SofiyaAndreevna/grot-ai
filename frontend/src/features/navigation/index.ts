@@ -1,5 +1,4 @@
 export { Sidebar } from './components/Sidebar'
-export type { NewProjectPayload } from './components/Sidebar'
 export { projectSections } from './constants'
 export type { ProjectSection } from './constants'
 export {
