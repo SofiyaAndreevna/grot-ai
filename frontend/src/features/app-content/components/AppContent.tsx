@@ -64,6 +64,17 @@ export const AppContent = ({
     )
   }
 
+  if (!activeEpicTitle || !activeChatId || !activeChatTitle) {
+    return (
+      <section className="chat-area empty-state">
+        <header className="chat-header">
+          <p className="chat-meta">Эпики</p>
+          <h2 className="chat-topic">Создайте первый эпик в сайдбаре</h2>
+        </header>
+      </section>
+    )
+  }
+
   return (
     <ChatArea
       activeEpicTitle={activeEpicTitle}
