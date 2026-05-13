@@ -13,6 +13,8 @@ export type EpicChat = {
 export type Epic = {
   id: string
   title: string
+  createdAt?: string
+  updatedAt?: string
   chats: EpicChat[]
 }
 

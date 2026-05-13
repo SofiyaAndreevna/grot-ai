@@ -21,6 +21,23 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     });
   }
 
+  if (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    err.code === 'XX000' &&
+    'message' in err &&
+    typeof err.message === 'string' &&
+    err.message.includes('max clients reached in session mode')
+  ) {
+    return res.status(503).json({
+      error: 'Database connection limit reached',
+      code: 'DATABASE_CONNECTION_LIMIT',
+    });
+  }
+
+  console.error('Unhandled backend error:', err);
+
   return res.status(500).json({
     error: 'Internal server error',
     code: 'INTERNAL_ERROR',

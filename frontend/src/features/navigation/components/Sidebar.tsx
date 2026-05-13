@@ -4,7 +4,7 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import './Sidebar.css'
-import { createEpic, deleteEpic, fetchEpics, renameEpic, seedProjects } from '@/features/chat'
+import { createEpic, createProject, deleteEpic, fetchEpics, renameEpic } from '@/features/chat'
 import type { Epic, Project } from '@/features/chat'
 import { projectSections } from '../constants'
 import type { ProjectSection } from '../constants'
@@ -13,7 +13,7 @@ import { buildChatPath, buildContextPath, isContextSection, isOverviewSection } 
 type SidebarProps = {
   projects: Project[]
   setProjects: Dispatch<SetStateAction<Project[]>>
-  activeProject: Project
+  activeProject: Project | null
   activeProjectSection: ProjectSection
   activeEpicId: string
   activeChatId: string
@@ -64,8 +64,9 @@ export const Sidebar = ({
   activeChatId,
 }: SidebarProps) => {
   const navigate = useNavigate()
-  const activeProjectId = activeProject.id
-  const epics = activeProject.epics
+  const activeProjectId = activeProject?.id ?? ''
+  const epics = activeProject?.epics ?? []
+  const projectIdsSignature = JSON.stringify(projects.map((project) => project.id))
   const [expandedEpicIds, setExpandedEpicIds] = useState<Set<string>>(() => new Set([activeEpicId]))
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
@@ -77,35 +78,52 @@ export const Sidebar = ({
 
   useEffect(() => {
     let isCancelled = false
+    const projectIds = JSON.parse(projectIdsSignature) as string[]
 
     const syncEpics = async () => {
-      for (const project of seedProjects) {
-        try {
-          const projectEpics = await fetchEpics(project.id)
-          if (isCancelled) {
-            return
+      const projectEpicsEntries = await Promise.all(
+        projectIds.map(async (projectId) => {
+          try {
+            const projectEpics = await fetchEpics(projectId)
+            return [projectId, projectEpics] as const
+          } catch (error) {
+            console.error(`Failed to load epics for project ${projectId}`, error)
+            return [projectId, null] as const
           }
-          setProjects((previousProjects) =>
-            previousProjects.map((candidateProject) =>
-              candidateProject.id === project.id
-                ? {
-                    ...candidateProject,
-                    epics: projectEpics,
-                  }
-                : candidateProject,
-            ),
-          )
-        } catch (error) {
-          console.error(`Failed to load epics for project ${project.id}`, error)
-        }
+        }),
+      )
+
+      if (isCancelled) {
+        return
       }
+
+      const projectEpicsByProjectId = new Map(
+        projectEpicsEntries.filter((entry): entry is readonly [string, Epic[]] => entry[1] !== null),
+      )
+
+      setProjects((previousProjects) =>
+        previousProjects.map((candidateProject) => {
+          const nextEpics = projectEpicsByProjectId.get(candidateProject.id)
+          if (!nextEpics) {
+            return candidateProject
+          }
+
+          return {
+            ...candidateProject,
+            epics: nextEpics,
+          }
+        }),
+      )
     }
 
-    void syncEpics()
+    if (projectIds.length > 0) {
+      void syncEpics()
+    }
+
     return () => {
       isCancelled = true
     }
-  }, [setProjects])
+  }, [projectIdsSignature, setProjects])
 
   const selectEpicAndChat = (epic: Epic, chat = epic.chats[0]) => {
     if (!chat) {
@@ -115,6 +133,10 @@ export const Sidebar = ({
   }
 
   const handleProjectSectionChange = (section: ProjectSection) => {
+    if (!activeProject) {
+      return
+    }
+
     if (isContextSection(section)) {
       navigate(buildContextPath(activeProjectId))
       return
@@ -131,26 +153,17 @@ export const Sidebar = ({
     navigate(getFirstProjectRoute(project))
   }
 
-  const handleAddProject = (title: string, description: string) => {
-    let nextProjectRoute = ''
-
-    setProjects((previousProjects) => {
-      const projectId = createUniqueProjectId(previousProjects, title)
-      const nextProject: Project = {
-        id: projectId,
-        title,
-        description,
-        epics: [],
-      }
-
-      const nextProjects = [...previousProjects, nextProject]
-      nextProjectRoute = getFirstProjectRoute(nextProject)
-      return nextProjects
-    })
-
-    if (nextProjectRoute) {
-      navigate(nextProjectRoute)
+  const handleAddProject = async (title: string, description: string) => {
+    const projectId = createUniqueProjectId(projects, title)
+    const createdProject = await createProject(projectId, title)
+    const nextProject: Project = {
+      ...createdProject,
+      description,
+      epics: [],
     }
+
+    setProjects((previousProjects) => [...previousProjects, nextProject])
+    navigate(getFirstProjectRoute(nextProject))
   }
 
   const handleEpicClick = (epic: Epic) => {
@@ -184,7 +197,7 @@ export const Sidebar = ({
     setEditingEpicName('')
   }
 
-  const handleProjectSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleProjectSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const trimmedName = projectName.trim()
     const trimmedDescription = projectDescription.trim()
@@ -193,12 +206,20 @@ export const Sidebar = ({
       return
     }
 
-    handleAddProject(trimmedName, trimmedDescription)
-    resetProjectForm()
+    try {
+      await handleAddProject(trimmedName, trimmedDescription)
+      resetProjectForm()
+    } catch (error) {
+      console.error('Failed to create project', error)
+    }
   }
 
   const handleCreateEpicSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!activeProject) {
+      return
+    }
+
     const trimmedName = epicName.trim()
     if (!trimmedName) {
       return
@@ -230,6 +251,10 @@ export const Sidebar = ({
 
   const handleRenameEpicSubmit = async (event: FormEvent<HTMLFormElement>, epicId: string) => {
     event.preventDefault()
+    if (!activeProject) {
+      return
+    }
+
     const trimmedName = editingEpicName.trim()
     if (!trimmedName) {
       return
@@ -258,6 +283,10 @@ export const Sidebar = ({
   }
 
   const handleDeleteEpic = async (epic: Epic) => {
+    if (!activeProject) {
+      return
+    }
+
     const shouldDelete = window.confirm(`Удалить эпик "${epic.title}"? Все его чаты тоже будут удалены.`)
     if (!shouldDelete) {
       return
@@ -356,19 +385,20 @@ export const Sidebar = ({
       </div>
 
       <div className="project-nav">
-        {projectSections.map((section) => (
-          <button
-            key={section}
-            type="button"
-            onClick={() => handleProjectSectionChange(section)}
-            className={`project-link ${activeProjectSection === section ? 'active' : ''}`}
-          >
-            {section}
-          </button>
-        ))}
+        {activeProject &&
+          projectSections.map((section) => (
+            <button
+              key={section}
+              type="button"
+              onClick={() => handleProjectSectionChange(section)}
+              className={`project-link ${activeProjectSection === section ? 'active' : ''}`}
+            >
+              {section}
+            </button>
+          ))}
       </div>
 
-      {isOverviewSection(activeProjectSection) && (
+      {activeProject && isOverviewSection(activeProjectSection) && (
         <div className="epics-area">
           <p className="section-label">Эпики</p>
           {!isEpicFormOpen && (
