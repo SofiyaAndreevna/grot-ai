@@ -1,5 +1,18 @@
 export { ChatArea } from './components/ChatArea'
-export { fetchEpics, createEpic, renameEpic, deleteEpic } from './api'
+export {
+  fetchEpics,
+  createEpic,
+  renameEpic,
+  deleteEpic,
+  createChat,
+  renameChat,
+  deleteChat,
+  sendChatMessage,
+  fetchProjects,
+  createProject,
+  updateProject,
+  deleteProject,
+} from './api'
 export {
   seedProjects,
   defaultProjectId,

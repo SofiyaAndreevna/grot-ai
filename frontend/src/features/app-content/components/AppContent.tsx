@@ -22,8 +22,6 @@ export const AppContent = ({
     useChatState({
       activeProjectId,
       activeChatId,
-      activeChatTitle,
-      activeEpicTitle,
     })
 
   const {
