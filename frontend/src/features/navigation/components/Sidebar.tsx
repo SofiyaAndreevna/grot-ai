@@ -4,7 +4,7 @@ import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import './Sidebar.css'
-import { createEpic, createProject, deleteEpic, fetchEpics, renameEpic } from '@/features/chat'
+import { createChat, createEpic, createProject, deleteChat, deleteEpic, fetchEpics, renameChat, renameEpic } from '@/features/chat'
 import type { Epic, Project } from '@/features/chat'
 import { projectSections } from '../constants'
 import type { ProjectSection } from '../constants'
@@ -67,7 +67,7 @@ export const Sidebar = ({
   const activeProjectId = activeProject?.id ?? ''
   const epics = activeProject?.epics ?? []
   const projectIdsSignature = JSON.stringify(projects.map((project) => project.id))
-  const [expandedEpicIds, setExpandedEpicIds] = useState<Set<string>>(() => new Set([activeEpicId]))
+  const [expandedEpicId, setExpandedEpicId] = useState<string>(activeEpicId)
   const [isProjectFormOpen, setIsProjectFormOpen] = useState(false)
   const [projectName, setProjectName] = useState('')
   const [projectDescription, setProjectDescription] = useState('')
@@ -75,6 +75,10 @@ export const Sidebar = ({
   const [epicName, setEpicName] = useState('')
   const [editingEpicId, setEditingEpicId] = useState<string | null>(null)
   const [editingEpicName, setEditingEpicName] = useState('')
+  const [chatFormEpicId, setChatFormEpicId] = useState<string | null>(null)
+  const [chatName, setChatName] = useState('')
+  const [editingChatId, setEditingChatId] = useState<string | null>(null)
+  const [editingChatName, setEditingChatName] = useState('')
 
   useEffect(() => {
     let isCancelled = false
@@ -125,6 +129,22 @@ export const Sidebar = ({
     }
   }, [projectIdsSignature, setProjects])
 
+  useEffect(() => {
+    if (!activeProject) {
+      setExpandedEpicId('')
+      return
+    }
+
+    if (activeEpicId) {
+      setExpandedEpicId(activeEpicId)
+      return
+    }
+
+    setExpandedEpicId((previousExpandedEpicId) =>
+      activeProject.epics.some((epic) => epic.id === previousExpandedEpicId) ? previousExpandedEpicId : '',
+    )
+  }, [activeProject, activeEpicId])
+
   const selectEpicAndChat = (epic: Epic, chat = epic.chats[0]) => {
     if (!chat) {
       return
@@ -143,6 +163,7 @@ export const Sidebar = ({
     }
 
     if (!activeEpicId || !activeChatId) {
+      navigate(`/${activeProjectId}`)
       return
     }
 
@@ -168,17 +189,7 @@ export const Sidebar = ({
 
   const handleEpicClick = (epic: Epic) => {
     selectEpicAndChat(epic)
-    setExpandedEpicIds((previousExpandedEpics) => {
-      const nextExpandedEpics = new Set(previousExpandedEpics)
-
-      if (nextExpandedEpics.has(epic.id)) {
-        nextExpandedEpics.delete(epic.id)
-      } else {
-        nextExpandedEpics.add(epic.id)
-      }
-
-      return nextExpandedEpics
-    })
+    setExpandedEpicId(epic.id)
   }
 
   const resetProjectForm = () => {
@@ -195,6 +206,16 @@ export const Sidebar = ({
   const resetEpicEdit = () => {
     setEditingEpicId(null)
     setEditingEpicName('')
+  }
+
+  const resetChatForm = () => {
+    setChatFormEpicId(null)
+    setChatName('')
+  }
+
+  const resetChatEdit = () => {
+    setEditingChatId(null)
+    setEditingChatName('')
   }
 
   const handleProjectSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -324,6 +345,144 @@ export const Sidebar = ({
     if (editingEpicId === epic.id) {
       resetEpicEdit()
     }
+    if (chatFormEpicId === epic.id) {
+      resetChatForm()
+    }
+    if (editingChatId && epic.chats.some((chat) => chat.id === editingChatId)) {
+      resetChatEdit()
+    }
+  }
+
+  const handleCreateChatSubmit = async (event: FormEvent<HTMLFormElement>, epic: Epic) => {
+    event.preventDefault()
+    if (!activeProject) {
+      return
+    }
+
+    const trimmedName = chatName.trim()
+    if (!trimmedName) {
+      return
+    }
+
+    const createdChat = await createChat(epic.id, trimmedName)
+    setProjects((previousProjects) =>
+      previousProjects.map((project) =>
+        project.id === activeProjectId
+          ? {
+              ...project,
+              epics: project.epics.map((candidateEpic) =>
+                candidateEpic.id === epic.id
+                  ? {
+                      ...candidateEpic,
+                      chats: [...candidateEpic.chats, createdChat],
+                    }
+                  : candidateEpic,
+              ),
+            }
+          : project,
+      ),
+    )
+
+    navigate(buildChatPath(activeProjectId, epic.id, createdChat.id))
+    resetChatForm()
+  }
+
+  const startChatEditing = (chatId: string, title: string) => {
+    setEditingChatId(chatId)
+    setEditingChatName(title)
+  }
+
+  const handleRenameChatSubmit = async (event: FormEvent<HTMLFormElement>, epicId: string, chatId: string) => {
+    event.preventDefault()
+    if (!activeProject) {
+      return
+    }
+
+    const trimmedName = editingChatName.trim()
+    if (!trimmedName) {
+      return
+    }
+
+    const renamed = await renameChat(chatId, trimmedName)
+    setProjects((previousProjects) =>
+      previousProjects.map((project) =>
+        project.id === activeProjectId
+          ? {
+              ...project,
+              epics: project.epics.map((epic) =>
+                epic.id === epicId
+                  ? {
+                      ...epic,
+                      chats: epic.chats.map((chat) => (chat.id === chatId ? { ...chat, title: renamed.title } : chat)),
+                    }
+                  : epic,
+              ),
+            }
+          : project,
+      ),
+    )
+    resetChatEdit()
+  }
+
+  const handleDeleteChat = async (epic: Epic, chatId: string) => {
+    if (!activeProject) {
+      return
+    }
+
+    const targetChat = epic.chats.find((chat) => chat.id === chatId)
+    if (!targetChat) {
+      return
+    }
+
+    const shouldDelete = window.confirm(`Удалить чат "${targetChat.title}"?`)
+    if (!shouldDelete) {
+      return
+    }
+
+    await deleteChat(chatId)
+
+    let nextPath: string | null = null
+    setProjects((previousProjects) =>
+      previousProjects.map((project) => {
+        if (project.id !== activeProjectId) {
+          return project
+        }
+
+        const nextEpics = project.epics.map((candidateEpic) =>
+          candidateEpic.id === epic.id
+            ? {
+                ...candidateEpic,
+                chats: candidateEpic.chats.filter((chat) => chat.id !== chatId),
+              }
+            : candidateEpic,
+        )
+
+        if (activeChatId === chatId) {
+          const sameEpic = nextEpics.find((candidateEpic) => candidateEpic.id === epic.id)
+          const fallbackSameEpicChat = sameEpic?.chats[0]
+          if (fallbackSameEpicChat) {
+            nextPath = buildChatPath(activeProjectId, epic.id, fallbackSameEpicChat.id)
+          } else {
+            const fallbackEpic = nextEpics.find((candidateEpic) => candidateEpic.chats.length > 0)
+            const fallbackChat = fallbackEpic?.chats[0]
+            nextPath =
+              fallbackEpic && fallbackChat ? buildChatPath(activeProjectId, fallbackEpic.id, fallbackChat.id) : buildContextPath(activeProjectId)
+          }
+        }
+
+        return {
+          ...project,
+          epics: nextEpics,
+        }
+      }),
+    )
+
+    if (nextPath) {
+      navigate(nextPath)
+    }
+    if (editingChatId === chatId) {
+      resetChatEdit()
+    }
   }
 
   return (
@@ -430,7 +589,7 @@ export const Sidebar = ({
 
           {epics.length === 0 && <p className="context-empty">Эпиков пока нет. Добавьте первый эпик.</p>}
           {epics.map((epic) => {
-            const isExpanded = expandedEpicIds.has(epic.id) || activeEpicId === epic.id
+            const isExpanded = expandedEpicId === epic.id
 
             return (
               <div key={epic.id} className="epic-block">
@@ -483,15 +642,75 @@ export const Sidebar = ({
                 {isExpanded && (
                   <div className="epic-chats">
                     {epic.chats.map((chat) => (
-                      <button
-                        key={chat.id}
-                        type="button"
-                        onClick={() => selectEpicAndChat(epic, chat)}
-                        className={`chat-link ${activeChatId === chat.id ? 'active' : ''}`}
-                      >
-                        • {chat.title}
-                      </button>
+                      <div key={chat.id} className="chat-row">
+                        {editingChatId === chat.id ? (
+                          <form className="chat-edit-form" onSubmit={(event) => handleRenameChatSubmit(event, epic.id, chat.id)}>
+                            <input value={editingChatName} onChange={(event) => setEditingChatName(event.target.value)} autoFocus />
+                            <button type="submit" disabled={!editingChatName.trim()}>
+                              Сохранить
+                            </button>
+                            <button type="button" className="ghost-button" onClick={resetChatEdit}>
+                              Отмена
+                            </button>
+                          </form>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => selectEpicAndChat(epic, chat)}
+                              className={`chat-link ${activeChatId === chat.id ? 'active' : ''}`}
+                            >
+                              • {chat.title}
+                            </button>
+                            <div className="epic-actions">
+                              <button
+                                type="button"
+                                className="epic-action-button"
+                                aria-label="Переименовать чат"
+                                onClick={() => startChatEditing(chat.id, chat.title)}
+                              >
+                                ✎
+                              </button>
+                              <button
+                                type="button"
+                                className="epic-action-button danger"
+                                aria-label="Удалить чат"
+                                onClick={() => handleDeleteChat(epic, chat.id)}
+                              >
+                                🗑
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
                     ))}
+                    {chatFormEpicId === epic.id ? (
+                      <form className="chat-edit-form" onSubmit={(event) => handleCreateChatSubmit(event, epic)}>
+                        <input
+                          value={chatName}
+                          onChange={(event) => setChatName(event.target.value)}
+                          placeholder="Название чата"
+                          autoFocus
+                        />
+                        <button type="submit" disabled={!chatName.trim()}>
+                          Создать
+                        </button>
+                        <button type="button" className="ghost-button" onClick={resetChatForm}>
+                          Отмена
+                        </button>
+                      </form>
+                    ) : (
+                      <button
+                        type="button"
+                        className="chat-create-button"
+                        onClick={() => {
+                          resetChatEdit()
+                          setChatFormEpicId(epic.id)
+                        }}
+                      >
+                        + Добавить чат
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

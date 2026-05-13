@@ -2,20 +2,17 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { buildChatKey, buildInitialMessagesByChat, fallbackAssistantMessage } from '../constants'
+import { sendChatMessage } from '../api'
 import type { ChatMessage, ChatMode } from '../types'
 
 type UseChatStateParams = {
   activeProjectId: string
   activeChatId: string
-  activeChatTitle: string
-  activeEpicTitle: string
 }
 
 export const useChatState = ({
   activeProjectId,
   activeChatId,
-  activeChatTitle,
-  activeEpicTitle,
 }: UseChatStateParams) => {
   const [chatMode, setChatMode] = useState<ChatMode>('analyst')
   const [input, setInput] = useState('')
@@ -35,8 +32,7 @@ export const useChatState = ({
     }
 
     const targetChatKey = buildChatKey(activeProjectId, activeChatId)
-    const targetChatTitle = activeChatTitle
-    const targetEpicTitle = activeEpicTitle
+    const targetChatId = activeChatId
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -52,24 +48,7 @@ export const useChatState = ({
     setIsLoading(true)
 
     try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: trimmedInput,
-          topic: targetChatTitle,
-          epic: targetEpicTitle,
-          mode: chatMode,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to get response from server')
-      }
-
-      const data = (await response.json()) as { reply?: string; sources?: string[] }
+      const data = await sendChatMessage(targetChatId, trimmedInput, chatMode)
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',

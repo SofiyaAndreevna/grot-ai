@@ -1,6 +1,14 @@
 import type { ErrorRequestHandler } from 'express';
 import { Router } from 'express';
 import { ZodError } from 'zod';
+import {
+  createChatHandler,
+  deleteChatHandler,
+  getChatsHandler,
+  renameChatHandler,
+  sendChatMessageHandler,
+  sendLegacyChatMessageHandler,
+} from '../controllers/chatController';
 import { createEpicHandler, deleteEpicHandler, getEpics, renameEpicHandler } from '../controllers/epicController';
 import { getHealth } from '../controllers/healthController';
 import {
@@ -22,6 +30,12 @@ router.get('/epics', getEpics);
 router.post('/epics', createEpicHandler);
 router.patch('/epics/:id', renameEpicHandler);
 router.delete('/epics/:id', deleteEpicHandler);
+router.get('/chats', getChatsHandler);
+router.post('/chats', createChatHandler);
+router.patch('/chats/:id', renameChatHandler);
+router.delete('/chats/:id', deleteChatHandler);
+router.post('/chats/:id/messages', sendChatMessageHandler);
+router.post('/chat', sendLegacyChatMessageHandler);
 
 const validationErrorMapper: ErrorRequestHandler = (error, _req, _res, next) => {
   if (error instanceof ZodError) {

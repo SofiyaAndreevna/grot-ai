@@ -186,6 +186,12 @@
   gap: 4px;
 }
 
+.chat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .epic-actions {
   display: flex;
   gap: 4px;
@@ -210,7 +216,8 @@
 }
 
 .epic-form,
-.epic-edit-form {
+.epic-edit-form,
+.chat-edit-form {
   border: 1px solid #2b3345;
   border-radius: 10px;
   background: #1b2232;
@@ -229,7 +236,8 @@
 }
 
 .epic-form input,
-.epic-edit-form input {
+.epic-edit-form input,
+.chat-edit-form input {
   width: 100%;
   border: 1px solid #40557f;
   background: #222b3d;
@@ -247,8 +255,15 @@
   gap: 8px;
 }
 
+.chat-edit-form {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
 .epic-form-actions button,
-.epic-edit-form button {
+.epic-edit-form button,
+.chat-edit-form button {
   border: 1px solid #2576ff;
   background: #2576ff;
   color: #ffffff;
@@ -258,20 +273,22 @@
 }
 
 .epic-form-actions .ghost-button,
-.epic-edit-form .ghost-button {
+.epic-edit-form .ghost-button,
+.chat-edit-form .ghost-button {
   border-color: #40557f;
   background: transparent;
   color: #d6deef;
 }
 
 .epic-form-actions button:disabled,
-.epic-edit-form button:disabled {
+.epic-edit-form button:disabled,
+.chat-edit-form button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 .chat-link {
-  width: 100%;
+  flex: 1;
   text-align: left;
   background: transparent;
   color: #c9cfdd;
@@ -289,6 +306,20 @@
   background: #243149;
   border-color: #35558f;
   color: #f3f6fd;
+}
+
+.chat-create-button {
+  border: 1px dashed #3f4f71;
+  border-radius: 8px;
+  background: transparent;
+  color: #c8d2ea;
+  padding: 7px 9px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chat-create-button:hover {
+  background: #1c2638;
 }
 
 @media (max-width: 900px) {
