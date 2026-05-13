@@ -1,13 +1,14 @@
-const { ApiError } = require('../errors/ApiError');
+import type { ErrorRequestHandler, RequestHandler } from 'express';
+import { ApiError } from '../errors/ApiError';
 
-function notFoundHandler(req, res) {
+export const notFoundHandler: RequestHandler = (_req, res) => {
   res.status(404).json({
     error: 'Route not found',
     code: 'NOT_FOUND',
   });
-}
+};
 
-function errorHandler(err, req, res, next) {
+export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
   if (res.headersSent) {
     return next(err);
   }
@@ -24,9 +25,4 @@ function errorHandler(err, req, res, next) {
     error: 'Internal server error',
     code: 'INTERNAL_ERROR',
   });
-}
-
-module.exports = {
-  notFoundHandler,
-  errorHandler,
 };
