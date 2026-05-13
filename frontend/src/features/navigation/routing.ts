@@ -20,12 +20,12 @@ type ResolvedProjectData = {
 const resolveDefaultProjectData = (projects: Project[]): ResolvedProjectData => {
   const project = projects[0]
   const epic = project.epics[0]
-  const chat = epic.chats[0]
+  const chat = epic?.chats[0]
 
   return {
     project,
-    epicId: epic.id,
-    chatId: chat.id,
+    epicId: epic?.id ?? '',
+    chatId: chat?.id ?? '',
   }
 }
 
@@ -33,12 +33,12 @@ const resolveProjectDataById = (projects: Project[], projectIdFromPath?: string)
   const fallback = resolveDefaultProjectData(projects)
   const project = projects.find((candidateProject) => candidateProject.id === projectIdFromPath) ?? fallback.project
   const epic = project.epics[0]
-  const chat = epic.chats[0]
+  const chat = epic?.chats[0]
 
   return {
     project,
-    epicId: epic.id,
-    chatId: chat.id,
+    epicId: epic?.id ?? '',
+    chatId: chat?.id ?? '',
   }
 }
 
@@ -47,6 +47,9 @@ export const buildChatPath = (projectId: string, epicId: string, chatId: string)
 export const buildContextPath = (projectId: string) => `/${projectId}/context`
 export const buildDefaultChatPath = (projects: Project[]) => {
   const { project, epicId, chatId } = resolveDefaultProjectData(projects)
+  if (!epicId || !chatId) {
+    return buildContextPath(project.id)
+  }
   return buildChatPath(project.id, epicId, chatId)
 }
 
@@ -72,13 +75,13 @@ export const resolveRouteState = (pathname: string, projects: Project[]): RouteS
 
   if (resource === 'chat') {
     const epic = fallback.project.epics.find((candidateEpic) => candidateEpic.id === epicIdFromPath) ?? fallback.project.epics[0]
-    const chat = epic.chats.find((candidateChat) => candidateChat.id === chatIdFromPath) ?? epic.chats[0]
+    const chat = epic?.chats.find((candidateChat) => candidateChat.id === chatIdFromPath) ?? epic?.chats[0]
 
     return {
       section: overviewSection,
       projectId: fallback.project.id,
-      epicId: epic.id,
-      chatId: chat.id,
+      epicId: epic?.id ?? '',
+      chatId: chat?.id ?? '',
     }
   }
 

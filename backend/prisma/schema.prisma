@@ -1,0 +1,198 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model assistant_message_sources {
+  id                                                                                                              BigInt                   @id @default(autoincrement())
+  assistant_message_id                                                                                            BigInt
+  context_document_id                                                                                             BigInt
+  context_chunk_id                                                                                                BigInt?
+  source_order                                                                                                    Int                      @default(0)
+  created_at                                                                                                      DateTime                 @default(now()) @db.Timestamptz(6)
+  chat_messages                                                                                                   chat_messages            @relation(fields: [assistant_message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  context_document_chunks_assistant_message_sources_context_chunk_idTocontext_document_chunks                     context_document_chunks? @relation("assistant_message_sources_context_chunk_idTocontext_document_chunks", fields: [context_chunk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  context_documents                                                                                               context_documents        @relation(fields: [context_document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  context_document_chunks_assistant_message_sources_context_document_id_context_chunk_idTocontext_document_chunks context_document_chunks? @relation("assistant_message_sources_context_document_id_context_chunk_idTocontext_document_chunks", fields: [context_document_id, context_chunk_id], references: [document_id, id], onDelete: NoAction, onUpdate: NoAction, map: "assistant_message_sources_document_chunk_fk")
+
+  @@unique([assistant_message_id, context_chunk_id], map: "assistant_message_sources_unique")
+  @@index([assistant_message_id])
+  @@index([context_chunk_id], where: raw("(context_chunk_id IS NOT NULL)"))
+  @@index([context_document_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model chat_messages {
+  id                                                            BigInt                      @id @default(autoincrement())
+  chat_id                                                       BigInt
+  role                                                          String
+  content                                                       String
+  created_at                                                    DateTime                    @default(now()) @db.Timestamptz(6)
+  deleted_at                                                    DateTime?                   @db.Timestamptz(6)
+  assistant_message_sources                                     assistant_message_sources[]
+  chats                                                         chats                       @relation(fields: [chat_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  llm_requests_llm_requests_assistant_message_idTochat_messages llm_requests[]              @relation("llm_requests_assistant_message_idTochat_messages")
+  llm_requests_llm_requests_user_message_idTochat_messages      llm_requests[]              @relation("llm_requests_user_message_idTochat_messages")
+
+  @@index([chat_id, created_at], where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model chats {
+  id            BigInt          @id @default(autoincrement())
+  epic_id       BigInt
+  title         String
+  mode          String
+  created_at    DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime        @default(now()) @db.Timestamptz(6)
+  deleted_at    DateTime?       @db.Timestamptz(6)
+  chat_messages chat_messages[]
+  epics         epics           @relation(fields: [epic_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  llm_requests  llm_requests[]
+
+  @@index([epic_id], where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model context_document_chunks {
+  id                                                                                                                BigInt                      @id @default(autoincrement())
+  document_id                                                                                                       BigInt
+  chunk_index                                                                                                       Int
+  content_text                                                                                                      String
+  start_line                                                                                                        Int?
+  end_line                                                                                                          Int?
+  created_at                                                                                                        DateTime                    @default(now()) @db.Timestamptz(6)
+  deleted_at                                                                                                        DateTime?                   @db.Timestamptz(6)
+  assistant_message_sources_assistant_message_sources_context_chunk_idTocontext_document_chunks                     assistant_message_sources[] @relation("assistant_message_sources_context_chunk_idTocontext_document_chunks")
+  assistant_message_sources_assistant_message_sources_context_document_id_context_chunk_idTocontext_document_chunks assistant_message_sources[] @relation("assistant_message_sources_context_document_id_context_chunk_idTocontext_document_chunks")
+  context_documents                                                                                                 context_documents           @relation(fields: [document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([document_id, id], map: "context_document_chunks_document_id_id_unique")
+  @@unique([document_id, chunk_index], map: "context_document_chunks_document_index_active_unique_idx", where: raw("(deleted_at IS NULL)"))
+  @@index([document_id], where: raw("(deleted_at IS NULL)"))
+}
+
+model context_documents {
+  id                        BigInt                      @id @default(autoincrement())
+  project_id                BigInt
+  source_id                 BigInt
+  uploaded_file_id          BigInt?
+  title                     String
+  source_uri                String?
+  file_path                 String?
+  language                  String?
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  deleted_at                DateTime?                   @db.Timestamptz(6)
+  assistant_message_sources assistant_message_sources[]
+  context_document_chunks   context_document_chunks[]
+  projects                  projects                    @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  context_sources           context_sources             @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  uploaded_files            uploaded_files?             @relation(fields: [uploaded_file_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], where: raw("(deleted_at IS NULL)"))
+  @@index([source_id], where: raw("(deleted_at IS NULL)"))
+  @@index([uploaded_file_id], where: raw("((uploaded_file_id IS NOT NULL) AND (deleted_at IS NULL))"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model context_sources {
+  id                BigInt              @id @default(autoincrement())
+  project_id        BigInt
+  type              String
+  name              String
+  url               String?
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?           @db.Timestamptz(6)
+  context_documents context_documents[]
+  projects          projects            @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([project_id, type, url], map: "context_sources_project_type_url_active_unique_idx", where: raw("((deleted_at IS NULL) AND (url IS NOT NULL))"))
+  @@index([project_id], where: raw("(deleted_at IS NULL)"))
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model epics {
+  id         BigInt    @id @default(autoincrement())
+  project_id BigInt
+  title      String
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  chats      chats[]
+  projects   projects  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], where: raw("(deleted_at IS NULL)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model integration_accounts {
+  id                     BigInt    @id @default(autoincrement())
+  provider               String
+  account_name           String
+  base_url               String?
+  encrypted_access_token String
+  created_at             DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at             DateTime? @db.Timestamptz(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model llm_requests {
+  id                                                             BigInt         @id @default(autoincrement())
+  chat_id                                                        BigInt
+  user_message_id                                                BigInt
+  assistant_message_id                                           BigInt?
+  mode_snapshot                                                  String
+  provider                                                       String
+  model                                                          String
+  prompt_text                                                    String
+  status                                                         String         @default("pending")
+  error_message                                                  String?
+  created_at                                                     DateTime       @default(now()) @db.Timestamptz(6)
+  completed_at                                                   DateTime?      @db.Timestamptz(6)
+  chat_messages_llm_requests_assistant_message_idTochat_messages chat_messages? @relation("llm_requests_assistant_message_idTochat_messages", fields: [assistant_message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  chats                                                          chats          @relation(fields: [chat_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  chat_messages_llm_requests_user_message_idTochat_messages      chat_messages  @relation("llm_requests_user_message_idTochat_messages", fields: [user_message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([assistant_message_id], where: raw("(assistant_message_id IS NOT NULL)"))
+  @@index([chat_id])
+  @@index([user_message_id])
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model projects {
+  id                BigInt              @id @default(autoincrement())
+  name              String
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?           @db.Timestamptz(6)
+  context_documents context_documents[]
+  context_sources   context_sources[]
+  epics             epics[]
+  uploaded_files    uploaded_files[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model uploaded_files {
+  id                BigInt              @id @default(autoincrement())
+  project_id        BigInt
+  original_filename String
+  file_type         String?
+  size_bytes        BigInt?
+  storage_key       String              @unique(map: "uploaded_files_storage_key_active_unique_idx", where: raw("(deleted_at IS NULL)"))
+  uploaded_at       DateTime            @default(now()) @db.Timestamptz(6)
+  deleted_at        DateTime?           @db.Timestamptz(6)
+  context_documents context_documents[]
+  projects          projects            @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([project_id], where: raw("(deleted_at IS NULL)"))
+}
