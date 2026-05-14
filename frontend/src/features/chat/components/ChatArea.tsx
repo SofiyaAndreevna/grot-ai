@@ -6,6 +6,7 @@ type ChatAreaProps = {
   activeEpicTitle: string
   activeChatTitle: string
   chatMode: ChatMode
+  isChatModeLocked: boolean
   onChatModeChange: (mode: ChatMode) => void
   messages: ChatMessage[]
   isLoading: boolean
@@ -18,6 +19,7 @@ export const ChatArea = ({
   activeEpicTitle,
   activeChatTitle,
   chatMode,
+  isChatModeLocked,
   onChatModeChange,
   messages,
   isLoading,
@@ -35,6 +37,7 @@ export const ChatArea = ({
             type="button"
             className={`mode-button ${chatMode === 'analyst' ? 'active' : ''}`}
             onClick={() => onChatModeChange('analyst')}
+            disabled={isChatModeLocked}
           >
             Для аналитика
           </button>
@@ -42,6 +45,7 @@ export const ChatArea = ({
             type="button"
             className={`mode-button ${chatMode === 'developer' ? 'active' : ''}`}
             onClick={() => onChatModeChange('developer')}
+            disabled={isChatModeLocked}
           >
             Для разработчика
           </button>

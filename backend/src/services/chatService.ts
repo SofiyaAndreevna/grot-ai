@@ -189,12 +189,23 @@ export async function deleteChat(chatId: string): Promise<boolean> {
 export async function sendMessageToChat({ chatId, message, mode }: SendMessageArgs) {
   await pool.query('BEGIN');
   try {
-    const chatResult = await pool.query<Pick<ChatRow, 'id' | 'title' | 'mode'>>(
+    const chatResult = await pool.query<
+      Pick<ChatRow, 'id' | 'title' | 'mode'> & {
+        has_user_messages: boolean;
+      }
+    >(
       `
         SELECT
           id::text AS id,
           title,
-          mode
+          mode,
+          EXISTS (
+            SELECT 1
+            FROM chat_messages
+            WHERE chat_id = chats.id
+              AND role = '${MessageRole.user}'
+              AND deleted_at IS NULL
+          ) AS has_user_messages
         FROM chats
         WHERE id = $1::bigint
           AND deleted_at IS NULL
@@ -209,7 +220,14 @@ export async function sendMessageToChat({ chatId, message, mode }: SendMessageAr
       throw new ApiError(404, 'Chat not found', 'CHAT_NOT_FOUND');
     }
 
-    const activeMode = toSafeChatMode(mode ?? chat.mode);
+    const requestedMode = mode ? toSafeChatMode(mode) : undefined;
+    const hasUserMessages = chat.has_user_messages;
+
+    if (hasUserMessages && requestedMode && requestedMode !== chat.mode) {
+      throw new ApiError(409, 'Chat mode is locked after first message', 'CHAT_MODE_LOCKED');
+    }
+
+    const activeMode = hasUserMessages ? chat.mode : toSafeChatMode(requestedMode ?? chat.mode);
 
     await pool.query(
       `
@@ -237,11 +255,14 @@ export async function sendMessageToChat({ chatId, message, mode }: SendMessageAr
       `
         UPDATE chats
         SET
-          mode = $2,
+          mode = CASE
+            WHEN $3::boolean THEN mode
+            ELSE $2
+          END,
           updated_at = NOW()
         WHERE id = $1::bigint
       `,
-      [chatId, activeMode],
+      [chatId, activeMode, hasUserMessages],
     );
 
     await pool.query('COMMIT');

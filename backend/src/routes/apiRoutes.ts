@@ -17,6 +17,11 @@ import {
   getProjectsHandler,
   updateProjectHandler,
 } from '../controllers/projectController';
+import {
+  createContextSourceHandler,
+  deleteContextSourceHandler,
+  getContextSourcesHandler,
+} from '../controllers/contextSourceController';
 import { ApiError } from '../errors/ApiError';
 
 const router = Router();
@@ -26,6 +31,9 @@ router.get('/projects', getProjectsHandler);
 router.post('/projects', createProjectHandler);
 router.patch('/projects/:id', updateProjectHandler);
 router.delete('/projects/:id', deleteProjectHandler);
+router.get('/context-sources', getContextSourcesHandler);
+router.post('/context-sources', createContextSourceHandler);
+router.delete('/context-sources/:id', deleteContextSourceHandler);
 router.get('/epics', getEpics);
 router.post('/epics', createEpicHandler);
 router.patch('/epics/:id', renameEpicHandler);

@@ -10,18 +10,45 @@ type UseChatStateParams = {
   activeChatId: string
 }
 
+type ChatSettings = {
+  mode: ChatMode
+  isModeLocked: boolean
+}
+
+const defaultChatSettings: ChatSettings = {
+  mode: 'analyst',
+  isModeLocked: false,
+}
+
 export const useChatState = ({
   activeProjectId,
   activeChatId,
 }: UseChatStateParams) => {
-  const [chatMode, setChatMode] = useState<ChatMode>('analyst')
+  const [chatSettingsByChat, setChatSettingsByChat] = useState<Record<string, ChatSettings>>({})
   const [input, setInput] = useState('')
   const [messagesByChat, setMessagesByChat] =
     useState<Record<string, ChatMessage[]>>(buildInitialMessagesByChat)
   const [isLoading, setIsLoading] = useState(false)
   const activeChatKey = buildChatKey(activeProjectId, activeChatId)
+  const activeChatSettings = chatSettingsByChat[activeChatKey] ?? defaultChatSettings
+  const chatMode = activeChatSettings.mode
+  const isChatModeLocked = activeChatSettings.isModeLocked
 
   const activeChatMessages = messagesByChat[activeChatKey] ?? [fallbackAssistantMessage]
+
+  const handleChatModeChange = (mode: ChatMode) => {
+    if (isChatModeLocked) {
+      return
+    }
+
+    setChatSettingsByChat((prev) => ({
+      ...prev,
+      [activeChatKey]: {
+        mode,
+        isModeLocked: false,
+      },
+    }))
+  }
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -33,6 +60,7 @@ export const useChatState = ({
 
     const targetChatKey = buildChatKey(activeProjectId, activeChatId)
     const targetChatId = activeChatId
+    const targetChatSettings = chatSettingsByChat[targetChatKey] ?? defaultChatSettings
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -48,7 +76,7 @@ export const useChatState = ({
     setIsLoading(true)
 
     try {
-      const data = await sendChatMessage(targetChatId, trimmedInput, chatMode)
+      const data = await sendChatMessage(targetChatId, trimmedInput, targetChatSettings.mode)
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -59,6 +87,13 @@ export const useChatState = ({
       setMessagesByChat((prev) => ({
         ...prev,
         [targetChatKey]: [...(prev[targetChatKey] ?? []), assistantMessage],
+      }))
+      setChatSettingsByChat((prev) => ({
+        ...prev,
+        [targetChatKey]: {
+          mode: targetChatSettings.mode,
+          isModeLocked: true,
+        },
       }))
     } catch {
       setMessagesByChat((prev) => ({
@@ -79,7 +114,8 @@ export const useChatState = ({
 
   return {
     chatMode,
-    setChatMode,
+    isChatModeLocked,
+    setChatMode: handleChatModeChange,
     input,
     setInput,
     isLoading,

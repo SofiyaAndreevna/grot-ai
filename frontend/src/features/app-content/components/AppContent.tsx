@@ -18,7 +18,7 @@ export const AppContent = ({
   activeChatId,
   activeChatTitle,
 }: AppContentProps) => {
-  const { chatMode, setChatMode, input, setInput, isLoading, activeChatMessages, handleSubmit } =
+  const { chatMode, isChatModeLocked, setChatMode, input, setInput, isLoading, activeChatMessages, handleSubmit } =
     useChatState({
       activeProjectId,
       activeChatId,
@@ -33,8 +33,13 @@ export const AppContent = ({
     contextContent,
     setContextContent,
     contextFiles,
+    isContextSubmitting,
+    contextSubmitError,
+    isContextSourcesLoading,
+    contextSourcesLoadError,
     clearContextEditor,
     startEditingContextRecord,
+    deleteContextRecord,
     handleFilesSelected,
     removeContextFile,
     handleContextSubmit,
@@ -52,12 +57,17 @@ export const AppContent = ({
         contextContent={contextContent}
         onContextContentChange={setContextContent}
         contextFiles={contextFiles}
+        isSubmitting={isContextSubmitting}
+        submitError={contextSubmitError}
+        isContextSourcesLoading={isContextSourcesLoading}
+        contextSourcesLoadError={contextSourcesLoadError}
         onFilesSelected={handleFilesSelected}
         onRemoveFile={removeContextFile}
         onSubmit={handleContextSubmit}
         onSwitchContextType={switchContextType}
         onResetEditor={clearContextEditor}
         onEditRecord={startEditingContextRecord}
+        onDeleteRecord={deleteContextRecord}
       />
     )
   }
@@ -78,6 +88,7 @@ export const AppContent = ({
       activeEpicTitle={activeEpicTitle}
       activeChatTitle={activeChatTitle}
       chatMode={chatMode}
+      isChatModeLocked={isChatModeLocked}
       onChatModeChange={setChatMode}
       messages={activeChatMessages}
       isLoading={isLoading}

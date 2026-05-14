@@ -13,12 +13,17 @@ type ContextScreenProps = {
   contextContent: string
   onContextContentChange: (value: string) => void
   contextFiles: UploadedContextFile[]
+  isSubmitting: boolean
+  submitError: string | null
+  isContextSourcesLoading: boolean
+  contextSourcesLoadError: string | null
   onFilesSelected: (event: ChangeEvent<HTMLInputElement>) => void
   onRemoveFile: (fileId: string) => void
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   onSwitchContextType: (type: ContextType) => void
   onResetEditor: () => void
   onEditRecord: (record: ContextRecord) => void
+  onDeleteRecord: (record: ContextRecord) => void
 }
 
 export const ContextScreen = ({
@@ -30,13 +35,20 @@ export const ContextScreen = ({
   contextContent,
   onContextContentChange,
   contextFiles,
+  isSubmitting,
+  submitError,
+  isContextSourcesLoading,
+  contextSourcesLoadError,
   onFilesSelected,
   onRemoveFile,
   onSubmit,
   onSwitchContextType,
   onResetEditor,
   onEditRecord,
+  onDeleteRecord,
 }: ContextScreenProps) => {
+  const isFilesType = activeContextType === ('Файлы' as unknown as ContextType)
+
   return (
     <section className="context-screen">
       <header className="context-header">
@@ -71,27 +83,44 @@ export const ContextScreen = ({
             </div>
 
             {activeTypeRecords.length === 0 ? (
-              <p className="context-empty">Записей пока нет. Добавьте первую запись справа.</p>
+              <p className="context-empty">
+                {isContextSourcesLoading && activeContextType === 'GitHub'
+                  ? 'Загружаем GitHub-источники...'
+                  : 'Записей пока нет. Добавьте первую запись справа.'}
+              </p>
             ) : (
               <div className="context-record-list">
                 {activeTypeRecords.map((record) => (
-                  <button
-                    key={record.id}
-                    type="button"
-                    className={`context-record-card ${editingContextId === record.id ? 'active' : ''}`}
-                    onClick={() => onEditRecord(record)}
-                  >
-                    <span className="context-record-title">{record.title}</span>
-                    <span className="context-record-date">Обновлено: {record.updatedAt}</span>
-                    <span className="context-record-preview">
-                      {activeContextType === 'Файлы'
-                        ? (record.files ?? []).map((file) => file.name).join(', ') || 'Файлы не выбраны'
-                        : record.content}
-                    </span>
-                  </button>
+                  <div key={record.id} className="context-record-item">
+                    <button
+                      type="button"
+                      className={`context-record-card ${editingContextId === record.id ? 'active' : ''}`}
+                      onClick={() => onEditRecord(record)}
+                    >
+                      <span className="context-record-title">{record.title}</span>
+                      <span className="context-record-date">Обновлено: {record.updatedAt}</span>
+                      <span className="context-record-preview">
+                        {isFilesType
+                          ? (record.files ?? []).map((file) => file.name).join(', ') || 'Файлы не выбраны'
+                          : record.content}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => onDeleteRecord(record)}
+                      disabled={isSubmitting}
+                    >
+                      Удалить
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
+
+            {activeContextType === 'GitHub' && contextSourcesLoadError ? (
+              <p className="context-empty">{contextSourcesLoadError}</p>
+            ) : null}
           </section>
 
           <section className="context-editor">
@@ -108,8 +137,8 @@ export const ContextScreen = ({
               </label>
 
               <label>
-                {activeContextType === 'Файлы' ? 'Загрузка файлов' : 'Контекст'}
-                {activeContextType === 'Файлы' ? (
+                {isFilesType ? 'Загрузка файлов' : 'Контекст'}
+                {isFilesType ? (
                   <div className="context-file-upload">
                     <input type="file" multiple onChange={onFilesSelected} />
                     {contextFiles.length > 0 ? (
@@ -148,15 +177,21 @@ export const ContextScreen = ({
                 <button
                   type="submit"
                   disabled={
+                    isSubmitting ||
                     !contextTitle.trim() ||
-                    (activeContextType === 'Файлы'
+                    (isFilesType
                       ? contextFiles.length === 0
                       : !contextContent.trim())
                   }
                 >
-                  {editingContextId ? 'Сохранить изменения' : 'Добавить запись'}
+                  {isSubmitting
+                    ? 'Сохраняем...'
+                    : editingContextId
+                      ? 'Сохранить изменения'
+                      : 'Добавить запись'}
                 </button>
               </div>
+              {submitError ? <p className="context-empty">{submitError}</p> : null}
             </form>
           </section>
         </div>

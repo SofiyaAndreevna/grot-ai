@@ -1,13 +1,13 @@
 export const contextTypes = [
   'Описание',
   'GitHub',
-  'Файлы',
-  'Ссылки',
-  'Jira',
-  'Confluence',
-  'Figma',
-  'Базы данных',
-  'Инструкции ИИ',
+  // 'Файлы',
+  // 'Ссылки',
+  // 'Jira',
+  // 'Confluence',
+  // 'Figma',
+  // 'Базы данных',
+  // 'Инструкции ИИ',
 ] as const
 
 export type ContextType = (typeof contextTypes)[number]

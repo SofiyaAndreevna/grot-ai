@@ -134,6 +134,12 @@
   padding-right: 2px;
 }
 
+.context-record-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
 .context-record-card {
   border: 1px solid #313d56;
   background: #222c40;
@@ -145,6 +151,22 @@
   flex-direction: column;
   gap: 5px;
   cursor: pointer;
+  flex: 1;
+}
+
+.context-record-item .ghost-button {
+  border: 1px solid #40557f;
+  background: transparent;
+  color: #d6deef;
+  border-radius: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.context-record-item .ghost-button:hover {
+  border-color: #4d6393;
+  background: #1f2738;
 }
 
 .context-record-card:hover {
