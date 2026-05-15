@@ -8,6 +8,7 @@ MCP server for fetching repository context from GitHub.
 - `github_list_directory` - list files/folders in a path
 - `github_get_file` - read file content from repo
 - `github_search_code` - search code in selected repository
+- `github_answer_with_claude` - take `{ context.gitHub, message }`, collect relevant repo context, and answer with Claude
 
 ## Setup
 
@@ -18,13 +19,17 @@ cd mcp-github-server
 npm install
 ```
 
-2. (Optional but recommended) set GitHub token:
+2. Set environment variables:
 
 ```bash
 export GITHUB_TOKEN=ghp_xxx
+export ANTHROPIC_API_KEY=sk-ant-xxx
+export CLAUDE_MODEL=claude-3-5-sonnet-latest # optional
 ```
 
-Without a token GitHub API rate limits are much lower.
+- `GITHUB_TOKEN`: recommended (higher GitHub API limits)
+- `ANTHROPIC_API_KEY`: required for `github_answer_with_claude`
+- `CLAUDE_MODEL`: optional override (defaults to `claude-3-5-sonnet-latest`)
 
 3. Build:
 
@@ -58,7 +63,9 @@ Add this server to your MCP config:
       "command": "node",
       "args": ["/ABSOLUTE/PATH/TO/mcp-github-server/dist/index.js"],
       "env": {
-        "GITHUB_TOKEN": "ghp_xxx"
+        "GITHUB_TOKEN": "ghp_xxx",
+        "ANTHROPIC_API_KEY": "sk-ant-xxx",
+        "CLAUDE_MODEL": "claude-3-5-sonnet-latest"
       }
     }
   }
@@ -74,9 +81,35 @@ For local development with tsx:
       "command": "npx",
       "args": ["tsx", "/ABSOLUTE/PATH/TO/mcp-github-server/src/index.ts"],
       "env": {
-        "GITHUB_TOKEN": "ghp_xxx"
+        "GITHUB_TOKEN": "ghp_xxx",
+        "ANTHROPIC_API_KEY": "sk-ant-xxx",
+        "CLAUDE_MODEL": "claude-3-5-sonnet-latest"
       }
     }
   }
 }
 ```
+
+## Tool input for backend payload
+
+Use `github_answer_with_claude` with the same shape your backend already sends:
+
+```json
+{
+  "context": {
+    "gitHub": [
+      "https://github.com/owner/repo-a",
+      "https://github.com/owner/repo-b"
+    ]
+  },
+  "message": "Как подключить авторизацию OAuth?",
+  "model": "claude-3-5-sonnet-latest",
+  "maxFilesPerRepo": 3,
+  "maxBytesPerFile": 12000,
+  "maxTokens": 1200
+}
+```
+
+Response includes:
+- final `answer` from Claude
+- list of `usedRepositories` (which repos/snippets were used)
