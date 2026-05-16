@@ -20,7 +20,7 @@ export const renameChatBodySchema = z.object({
 
 export const sendChatMessageBodySchema = z.object({
   message: z.string().trim().min(1),
-  mode: z.enum(['analyst', 'developer']).optional(),
+  mode: z.enum(['analyst', 'developer']),
 });
 
 export const legacyChatBodySchema = z.object({

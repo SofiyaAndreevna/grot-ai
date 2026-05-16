@@ -1,4 +1,6 @@
 import type { FormEvent } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 import type { ChatMessage, ChatMode } from '../types'
 
@@ -9,6 +11,7 @@ type ChatAreaProps = {
   isChatModeLocked: boolean
   onChatModeChange: (mode: ChatMode) => void
   messages: ChatMessage[]
+  isMessagesLoading: boolean
   isLoading: boolean
   input: string
   onInputChange: (value: string) => void
@@ -22,6 +25,7 @@ export const ChatArea = ({
   isChatModeLocked,
   onChatModeChange,
   messages,
+  isMessagesLoading,
   isLoading,
   input,
   onInputChange,
@@ -55,7 +59,13 @@ export const ChatArea = ({
       <div className="messages">
         {messages.map((message) => (
           <div key={message.id} className={`message ${message.role}`}>
-            <p>{message.text}</p>
+            {message.role === 'assistant' ? (
+              <div className="message-markdown">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
+              </div>
+            ) : (
+              <p>{message.text}</p>
+            )}
             {message.role === 'assistant' && message.sources && message.sources.length > 0 && (
               <div className="message-sources">
                 <span>Источники:</span>
@@ -68,6 +78,7 @@ export const ChatArea = ({
             )}
           </div>
         ))}
+        {isMessagesLoading && <div className="message assistant">Загружаю историю чата...</div>}
         {isLoading && <div className="message assistant">Печатает...</div>}
       </div>
 
@@ -76,9 +87,9 @@ export const ChatArea = ({
           value={input}
           onChange={(event) => onInputChange(event.target.value)}
           placeholder={`Задайте вопрос в режиме "${chatMode === 'analyst' ? 'аналитик' : 'разработчик'}"...`}
-          disabled={isLoading}
+          disabled={isLoading || isMessagesLoading}
         />
-        <button type="submit" disabled={isLoading || !input.trim()}>
+        <button type="submit" disabled={isLoading || isMessagesLoading || !input.trim()}>
           Отправить
         </button>
       </form>

@@ -4,6 +4,7 @@ import { ZodError } from 'zod';
 import {
   createChatHandler,
   deleteChatHandler,
+  getChatMessagesHandler,
   getChatsHandler,
   renameChatHandler,
   sendChatMessageHandler,
@@ -42,6 +43,7 @@ router.get('/chats', getChatsHandler);
 router.post('/chats', createChatHandler);
 router.patch('/chats/:id', renameChatHandler);
 router.delete('/chats/:id', deleteChatHandler);
+router.get('/chats/:id/messages', getChatMessagesHandler);
 router.post('/chats/:id/messages', sendChatMessageHandler);
 router.post('/chat', sendLegacyChatMessageHandler);
 

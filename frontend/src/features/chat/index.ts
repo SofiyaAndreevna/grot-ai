@@ -8,6 +8,7 @@ export {
   renameChat,
   deleteChat,
   sendChatMessage,
+  fetchChatMessages,
   fetchProjects,
   createProject,
   updateProject,

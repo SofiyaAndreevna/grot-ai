@@ -1,6 +1,14 @@
 import type { RequestHandler } from 'express';
 import { ApiError } from '../errors/ApiError';
-import { buildChatReply, createChat, deleteChat, getChatsByEpicId, renameChat, sendMessageToChat } from '../services/chatService';
+import {
+  buildChatReply,
+  createChat,
+  deleteChat,
+  getChatMessages,
+  getChatsByEpicId,
+  renameChat,
+  sendMessageToChat,
+} from '../services/chatService';
 import {
   chatParamsSchema,
   createChatBodySchema,
@@ -78,6 +86,17 @@ export const sendChatMessageHandler: RequestHandler = async (req, res, next) => 
     const response = await sendMessageToChat({ chatId: id, ...payload });
 
     res.json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getChatMessagesHandler: RequestHandler = async (req, res, next) => {
+  try {
+    const { id } = chatParamsSchema.parse(req.params);
+    const payload = await getChatMessages(id);
+
+    res.json(payload);
   } catch (error) {
     next(error);
   }
