@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react'
+import { useEffect, useRef, type FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -31,6 +31,20 @@ export const ChatArea = ({
   onInputChange,
   onSubmit,
 }: ChatAreaProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) {
+      return
+    }
+
+    textarea.style.height = 'auto'
+    const nextHeight = Math.min(textarea.scrollHeight, 210)
+    textarea.style.height = `${nextHeight}px`
+    textarea.style.overflowY = textarea.scrollHeight > 210 ? 'auto' : 'hidden'
+  }, [input])
+
   return (
     <section className="chat-area">
       <header className="chat-header">
@@ -83,11 +97,19 @@ export const ChatArea = ({
       </div>
 
       <form className="chat-form" onSubmit={onSubmit}>
-        <input
+        <textarea
+          ref={textareaRef}
           value={input}
           onChange={(event) => onInputChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault()
+              event.currentTarget.form?.requestSubmit()
+            }
+          }}
           placeholder={`Задайте вопрос в режиме "${chatMode === 'analyst' ? 'аналитик' : 'разработчик'}"...`}
           disabled={isLoading || isMessagesLoading}
+          rows={1}
         />
         <button type="submit" disabled={isLoading || isMessagesLoading || !input.trim()}>
           Отправить

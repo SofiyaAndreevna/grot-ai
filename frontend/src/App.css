@@ -455,9 +455,10 @@
   padding: 16px 24px;
   display: flex;
   gap: 10px;
+  align-items: flex-end;
 }
 
-.chat-form input {
+.chat-form textarea {
   flex: 1;
   background: #232a3b;
   border: 1px solid #40557f;
@@ -465,6 +466,11 @@
   border-radius: 10px;
   padding: 12px;
   font-size: 15px;
+  font-family: inherit;
+  line-height: 1.45;
+  max-height: 210px;
+  resize: none;
+  overflow-y: hidden;
 }
 
 .chat-form button {
@@ -473,6 +479,8 @@
   color: #ffffff;
   border-radius: 10px;
   padding: 0 16px;
+  height: 44px;
+  align-self: flex-end;
   cursor: pointer;
 }
 
