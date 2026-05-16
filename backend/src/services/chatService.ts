@@ -1,5 +1,6 @@
 import { ApiError } from '../errors/ApiError';
 import { pool } from '../db/pool';
+import { askGithubContext } from './githubContextService';
 
 const ChatMode = {
   analyst: 'analyst',
@@ -32,6 +33,10 @@ type ChatRow = {
   mode: ChatModeValue;
   created_at: string;
   updated_at: string;
+};
+
+type ProjectGithubSourceRow = {
+  url: string | null;
 };
 
 type BuildChatReplyParams = {
@@ -169,9 +174,11 @@ export async function renameChat({ chatId, title }: RenameChatArgs): Promise<Cha
 }
 
 export async function deleteChat(chatId: string): Promise<boolean> {
-  await pool.query('BEGIN');
+  const client = await pool.connect();
   try {
-    const chatResult = await pool.query(
+    await client.query('BEGIN');
+
+    const chatResult = await client.query(
       `
         UPDATE chats
         SET
@@ -185,11 +192,11 @@ export async function deleteChat(chatId: string): Promise<boolean> {
     );
 
     if (!chatResult.rowCount) {
-      await pool.query('ROLLBACK');
+      await client.query('ROLLBACK');
       return false;
     }
 
-    await pool.query(
+    await client.query(
       `
         UPDATE chat_messages
         SET
@@ -200,11 +207,13 @@ export async function deleteChat(chatId: string): Promise<boolean> {
       [chatId],
     );
 
-    await pool.query('COMMIT');
+    await client.query('COMMIT');
     return true;
   } catch (error) {
-    await pool.query('ROLLBACK');
+    await client.query('ROLLBACK');
     throw error;
+  } finally {
+    client.release();
   }
 }
 
@@ -268,9 +277,15 @@ export async function getChatMessages(chatId: string): Promise<ChatMessagesRespo
 }
 
 export async function sendMessageToChat({ chatId, message, mode }: SendMessageArgs) {
-  await pool.query('BEGIN');
+  const client = await pool.connect();
+
+  let activeMode: ChatModeValue = DEFAULT_CHAT_MODE;
+  let githubUrls: string[] = [];
+
   try {
-    const chatResult = await pool.query<
+    await client.query('BEGIN');
+
+    const chatResult = await client.query<
       Pick<ChatRow, 'id' | 'title' | 'mode'> & {
         project_id: string;
         has_user_messages: boolean;
@@ -312,9 +327,9 @@ export async function sendMessageToChat({ chatId, message, mode }: SendMessageAr
       throw new ApiError(409, 'Chat mode is locked after first message', 'CHAT_MODE_LOCKED');
     }
 
-    const activeMode = hasUserMessages ? chat.mode : toSafeChatMode(requestedMode ?? chat.mode);
+    activeMode = hasUserMessages ? chat.mode : toSafeChatMode(requestedMode ?? chat.mode);
 
-    await pool.query(
+    await client.query(
       `
         INSERT INTO chat_messages (chat_id, role, content)
         VALUES ($1::bigint, $2, $3)
@@ -322,21 +337,7 @@ export async function sendMessageToChat({ chatId, message, mode }: SendMessageAr
       [chatId, MessageRole.user, message],
     );
 
-    const replyPayload = buildChatReply({
-      message,
-      topic: chat.title,
-      mode: activeMode,
-    });
-
-    await pool.query(
-      `
-        INSERT INTO chat_messages (chat_id, role, content)
-        VALUES ($1::bigint, $2, $3)
-      `,
-      [chatId, MessageRole.assistant, replyPayload.reply],
-    );
-
-    await pool.query(
+    await client.query(
       `
         UPDATE chats
         SET
@@ -350,11 +351,74 @@ export async function sendMessageToChat({ chatId, message, mode }: SendMessageAr
       [chatId, activeMode, hasUserMessages],
     );
 
-    await pool.query('COMMIT');
+    const githubSourcesResult = await client.query<ProjectGithubSourceRow>(
+      `
+        SELECT url
+        FROM context_sources
+        WHERE project_id = $1::bigint
+          AND type = 'github'
+          AND deleted_at IS NULL
+          AND url IS NOT NULL
+        ORDER BY updated_at DESC
+      `,
+      [chat.project_id],
+    );
 
-    return replyPayload;
+    githubUrls = [...new Set(githubSourcesResult.rows.map((row) => row.url?.trim()).filter(Boolean))] as string[];
+
+    await client.query('COMMIT');
   } catch (error) {
-    await pool.query('ROLLBACK');
+    await client.query('ROLLBACK');
     throw error;
+  } finally {
+    client.release();
   }
+
+  let replyPayload: {
+    reply: string;
+    timestamp: string;
+    sources: string[];
+  };
+
+  if (githubUrls.length > 0) {
+    try {
+      const mcpResult = await askGithubContext({
+        message,
+        githubUrls,
+        mode: activeMode,
+      });
+      replyPayload = {
+        reply: mcpResult.answer,
+        timestamp: new Date().toISOString(),
+        sources: mcpResult.sources.length > 0 ? mcpResult.sources : githubUrls,
+      };
+    } catch (mcpError) {
+      console.error('Failed to fetch response from MCP GitHub server:', mcpError);
+      replyPayload = {
+        reply:
+          'Не получилось получить ответ от MCP GitHub сервера. ' +
+          'Проверьте, что `mcp-github-server` собран и запущен, а токены настроены.',
+        timestamp: new Date().toISOString(),
+        sources: githubUrls,
+      };
+    }
+  } else {
+    replyPayload = {
+      reply:
+        'Для этого проекта пока нет GitHub источников контекста. ' +
+        'Добавьте `context_source` с type `github`, чтобы я мог отвечать по коду репозиториев.',
+      timestamp: new Date().toISOString(),
+      sources: [],
+    };
+  }
+
+  await pool.query(
+    `
+      INSERT INTO chat_messages (chat_id, role, content)
+      VALUES ($1::bigint, $2, $3)
+    `,
+    [chatId, MessageRole.assistant, replyPayload.reply],
+  );
+
+  return replyPayload;
 }

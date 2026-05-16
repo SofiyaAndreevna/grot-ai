@@ -19,8 +19,27 @@ type GitHubFileContent = {
   content: string;
 };
 
+type GetGitHubReadmeParams = {
+  owner: string;
+  repo: string;
+  ref?: string;
+  maxBytes: number;
+};
+
+function normalizeSecret(rawValue?: string): string {
+  const trimmed = rawValue?.trim() ?? "";
+  if (!trimmed) {
+    return "";
+  }
+
+  const hasMatchingQuotes =
+    (trimmed.startsWith("'") && trimmed.endsWith("'")) ||
+    (trimmed.startsWith('"') && trimmed.endsWith('"'));
+  return hasMatchingQuotes ? trimmed.slice(1, -1).trim() : trimmed;
+}
+
 function getAuthHeaders(): Record<string, string> {
-  const token = process.env.GITHUB_TOKEN?.trim();
+  const token = normalizeSecret(process.env.GITHUB_TOKEN);
   const headers: Record<string, string> = {};
   if (token) {
     headers.Authorization = `Bearer ${token}`;
@@ -51,7 +70,10 @@ function trimDecodedContent(content: string, maxBytes: number) {
 }
 
 export async function githubRequest<T>(path: string): Promise<T> {
-  const response = await fetch(`${GITHUB_API_URL}${path}`, {
+  const requestUrl = path.startsWith("http://") || path.startsWith("https://")
+    ? path
+    : `${GITHUB_API_URL}${path}`;
+  const response = await fetch(requestUrl, {
     method: "GET",
     headers: {
       Accept: "application/vnd.github+json",
@@ -100,6 +122,31 @@ export async function getGitHubFileContent(
 
   if (file.encoding !== "base64" || !file.content) {
     throw new Error(`File content unavailable for "${path}".`);
+  }
+
+  const normalized = file.content.replace(/\n/g, "");
+  const decoded = decodeBase64(normalized);
+  const { content, isTrimmed } = trimDecodedContent(decoded, maxBytes);
+
+  return {
+    htmlUrl: file.html_url,
+    size: file.size,
+    isTrimmed,
+    content,
+  };
+}
+
+export async function getGitHubReadmeContent(
+  params: GetGitHubReadmeParams,
+): Promise<GitHubFileContent> {
+  const { owner, repo, ref, maxBytes } = params;
+  const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
+  const file = await githubRequest<GitHubFileResponse>(
+    `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/readme${query}`,
+  );
+
+  if (file.encoding !== "base64" || !file.content) {
+    throw new Error("README content unavailable.");
   }
 
   const normalized = file.content.replace(/\n/g, "");

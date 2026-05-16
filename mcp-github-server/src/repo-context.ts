@@ -1,7 +1,11 @@
 import {
   MAX_TOTAL_CONTEXT_CHARS,
 } from "./constants.js";
-import { getGitHubFileContent, githubRequest } from "./github-client.js";
+import {
+  getGitHubFileContent,
+  getGitHubReadmeContent,
+  githubRequest,
+} from "./github-client.js";
 import type {
   GitHubRepoResponse,
   GitHubSearchItem,
@@ -35,6 +39,11 @@ const STOP_WORDS = new Set([
   "для",
   "про",
 ]);
+
+const FALLBACK_CODE_SEARCH_QUERIES = [
+  "auth authentication authorization login oauth jwt session token middleware security",
+  "api route handler service controller",
+];
 
 export function parseGitHubRepoUrl(url: string): ParsedGitHubRepoUrl {
   let parsed: URL;
@@ -90,10 +99,9 @@ export async function buildRepoContexts(
 
     let readme: string | null = null;
     try {
-      const readmeFile = await getGitHubFileContent({
+      const readmeFile = await getGitHubReadmeContent({
         owner,
         repo,
-        path: "README.md",
         ref: repoResponse.default_branch,
         maxBytes: Math.min(maxBytesPerFile, 8_000),
       });
@@ -101,39 +109,58 @@ export async function buildRepoContexts(
     } catch {
       readme = null;
     }
-
-    const params = new URLSearchParams({
-      q: `${searchQuery} repo:${owner}/${repo}`,
-      per_page: String(maxFilesPerRepo),
-      page: "1",
-    });
-
-    const codeSearch = await githubRequest<{
-      items: GitHubSearchItem[];
-    }>(`/search/code?${params.toString()}`);
-
     const snippets: RepoContext["snippets"] = [];
-    for (const item of codeSearch.items.slice(0, maxFilesPerRepo)) {
-      if (totalChars >= MAX_TOTAL_CONTEXT_CHARS) {
+    const seenPaths = new Set<string>();
+    const candidateQueries = [searchQuery, ...FALLBACK_CODE_SEARCH_QUERIES];
+
+    for (const candidateQuery of candidateQueries) {
+      if (snippets.length >= maxFilesPerRepo || totalChars >= MAX_TOTAL_CONTEXT_CHARS) {
         break;
       }
 
+      const queryParams = new URLSearchParams({
+        q: `${candidateQuery} repo:${owner}/${repo}`,
+        per_page: String(maxFilesPerRepo * 2),
+        page: "1",
+      });
+
+      let items: GitHubSearchItem[] = [];
       try {
-        const file = await getGitHubFileContent({
-          owner,
-          repo,
-          path: item.path,
-          maxBytes: maxBytesPerFile,
-        });
-        snippets.push({
-          path: item.path,
-          htmlUrl: file.htmlUrl,
-          content: file.content,
-          isTrimmed: file.isTrimmed,
-        });
-        totalChars += file.content.length;
+        const codeSearch = await githubRequest<{
+          items: GitHubSearchItem[];
+        }>(`/search/code?${queryParams.toString()}`);
+        items = codeSearch.items;
       } catch {
-        // Skip unreadable/binary files and continue gathering context.
+        // Degrade gracefully if a code-search query fails.
+        continue;
+      }
+
+      for (const item of items) {
+        if (snippets.length >= maxFilesPerRepo || totalChars >= MAX_TOTAL_CONTEXT_CHARS) {
+          break;
+        }
+        if (seenPaths.has(item.path)) {
+          continue;
+        }
+
+        try {
+          const file = await getGitHubFileContent({
+            owner,
+            repo,
+            path: item.path,
+            maxBytes: maxBytesPerFile,
+          });
+          snippets.push({
+            path: item.path,
+            htmlUrl: file.htmlUrl,
+            content: file.content,
+            isTrimmed: file.isTrimmed,
+          });
+          seenPaths.add(item.path);
+          totalChars += file.content.length;
+        } catch {
+          // Skip unreadable/binary files and continue gathering context.
+        }
       }
     }
 
