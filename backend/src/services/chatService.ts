@@ -44,7 +44,8 @@ type ChatRow = {
   updated_at: string;
 };
 
-type ProjectGithubSourceRow = {
+type ProjectContextSourceRow = {
+  type: string;
   url: string | null;
 };
 
@@ -308,6 +309,7 @@ export async function sendMessageToChat({ chatId, message, mode, scenario }: Sen
   let activeMode: ChatModeValue = DEFAULT_CHAT_MODE;
   let activeScenario: ChatScenarioValue = DEFAULT_CHAT_SCENARIO;
   let githubUrls: string[] = [];
+  let externalUrls: string[] = [];
 
   try {
     await client.query('BEGIN');
@@ -392,12 +394,12 @@ export async function sendMessageToChat({ chatId, message, mode, scenario }: Sen
       [chatId, activeMode, activeScenario, hasUserMessages],
     );
 
-    const githubSourcesResult = await client.query<ProjectGithubSourceRow>(
+    const contextSourcesResult = await client.query<ProjectContextSourceRow>(
       `
-        SELECT url
+        SELECT type, url
         FROM context_sources
         WHERE project_id = $1::bigint
-          AND type = 'github'
+          AND type IN ('github', 'external_url')
           AND deleted_at IS NULL
           AND url IS NOT NULL
         ORDER BY updated_at DESC
@@ -405,7 +407,23 @@ export async function sendMessageToChat({ chatId, message, mode, scenario }: Sen
       [chat.project_id],
     );
 
-    githubUrls = [...new Set(githubSourcesResult.rows.map((row) => row.url?.trim()).filter(Boolean))] as string[];
+    githubUrls = [
+      ...new Set(
+        contextSourcesResult.rows
+          .filter((row) => row.type === 'github')
+          .map((row) => row.url?.trim())
+          .filter(Boolean),
+      ),
+    ] as string[];
+
+    externalUrls = [
+      ...new Set(
+        contextSourcesResult.rows
+          .filter((row) => row.type === 'external_url')
+          .map((row) => row.url?.trim())
+          .filter(Boolean),
+      ),
+    ] as string[];
 
     await client.query('COMMIT');
   } catch (error) {
@@ -421,16 +439,18 @@ export async function sendMessageToChat({ chatId, message, mode, scenario }: Sen
     sources: string[];
   };
 
-  if (githubUrls.length > 0) {
+  if (githubUrls.length > 0 || externalUrls.length > 0) {
     console.log('activeMode', activeMode);
     console.log('activeScenario', activeScenario);
     try {
-      const mcpResult = await askGithubContext({
+      const githubContextRequest = {
         message,
         githubUrls,
+        externalUrls,
         mode: activeMode,
         scenario: activeScenario,
-      });
+      };
+      const mcpResult = await askGithubContext(githubContextRequest);
       replyPayload = {
         reply: mcpResult.answer,
         timestamp: new Date().toISOString(),

@@ -115,17 +115,36 @@ function formatWebSearchSource(source: z.infer<typeof webSourceSchema>): string 
 
 function buildAllowedWebSources(
   allowedRepos: AllowedRepo[],
+  externalUrls: string[] | undefined,
   explicitSources: z.infer<typeof webSourceSchema>[] | undefined,
 ): z.infer<typeof webSourceSchema>[] {
-  if (explicitSources && explicitSources.length > 0) {
-    return explicitSources;
-  }
+  const normalizedExternalSources =
+    externalUrls
+      ?.map((url) => url.trim())
+      .filter((url): url is string => url.length > 0)
+      .map((url) => ({
+        url,
+        title: "External URL context source",
+        description: "External URL context source",
+      })) ?? [];
 
-  return allowedRepos.map((repoContext) => ({
-    url: repoContext.sourceUrl,
-    title: `${repoContext.owner}/${repoContext.repo}`,
-    description: "GitHub repository context source",
-  }));
+  const baseSources =
+    explicitSources && explicitSources.length > 0
+      ? explicitSources
+      : allowedRepos.map((repoContext) => ({
+      url: repoContext.sourceUrl,
+      title: `${repoContext.owner}/${repoContext.repo}`,
+      description: "GitHub repository context source",
+      }));
+
+  const uniqueByUrl = new Map<string, z.infer<typeof webSourceSchema>>();
+  [...baseSources, ...normalizedExternalSources].forEach((source) => {
+    if (!uniqueByUrl.has(source.url)) {
+      uniqueByUrl.set(source.url, source);
+    }
+  });
+
+  return [...uniqueByUrl.values()];
 }
 
 function buildWebSearchResultsBlock(
@@ -491,6 +510,7 @@ export function registerClaudeTool(server: McpServer): void {
     {
       context: z.object({
         gitHub: z.array(z.string().url()).min(1),
+        externalUrls: z.array(z.string().url()).max(200).optional(),
         webSearchSources: z.array(webSourceSchema).max(30).optional(),
       }),
       message: z.string().min(1),
@@ -540,7 +560,11 @@ export function registerClaudeTool(server: McpServer): void {
       });
       const repositoriesAccessBlock = buildRepositoryAccessBlock(allowedRepos);
       const systemPrompt = resolveSystemPrompt(mode, scenario);
-      const allowedWebSources = buildAllowedWebSources(allowedRepos, context.webSearchSources);
+      const allowedWebSources = buildAllowedWebSources(
+        allowedRepos,
+        context.externalUrls,
+        context.webSearchSources,
+      );
       const userPrompt = buildClaudeUserPrompt({
         mode,
         scenario,

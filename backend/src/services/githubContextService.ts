@@ -23,6 +23,7 @@ const FALLBACK_MCP_SCRIPT_PATH = path.resolve(
 type GitHubAnswerPayload = {
   context: {
     gitHub: string[];
+    externalUrls?: string[];
   };
   message: string;
   mode: string;
@@ -148,11 +149,13 @@ function explainMcpAuthError(message: string): string {
 export async function askGithubContext({
   message,
   githubUrls,
+  externalUrls,
   mode,
   scenario,
 }: {
   message: string;
   githubUrls: string[];
+  externalUrls?: string[];
   mode: string;
   scenario: string;
 }): Promise<GithubContextReply> {
@@ -160,6 +163,7 @@ export async function askGithubContext({
   const payload: GitHubAnswerPayload = {
     context: {
       gitHub: githubUrls,
+      externalUrls,
     },
     message,
     mode,
