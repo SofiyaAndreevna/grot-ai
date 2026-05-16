@@ -18,11 +18,20 @@ export const AppContent = ({
   activeChatId,
   activeChatTitle,
 }: AppContentProps) => {
-  const { chatMode, isChatModeLocked, setChatMode, input, setInput, isLoading, activeChatMessages, handleSubmit } =
-    useChatState({
-      activeProjectId,
-      activeChatId,
-    })
+  const {
+    chatMode,
+    isChatModeLocked,
+    setChatMode,
+    input,
+    setInput,
+    isLoading,
+    isMessagesLoading,
+    activeChatMessages,
+    handleSubmit,
+  } = useChatState({
+    activeProjectId,
+    activeChatId,
+  })
 
   const {
     activeContextType,
@@ -91,6 +100,7 @@ export const AppContent = ({
       isChatModeLocked={isChatModeLocked}
       onChatModeChange={setChatMode}
       messages={activeChatMessages}
+      isMessagesLoading={isMessagesLoading}
       isLoading={isLoading}
       input={input}
       onInputChange={setInput}

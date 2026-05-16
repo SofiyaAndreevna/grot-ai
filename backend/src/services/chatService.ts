@@ -43,7 +43,7 @@ type BuildChatReplyParams = {
 type SendMessageArgs = {
   chatId: string;
   message: string;
-  mode?: ChatModeValue;
+  mode: ChatModeValue;
 };
 
 type CreateChatArgs = {
@@ -55,6 +55,28 @@ type CreateChatArgs = {
 type RenameChatArgs = {
   chatId: string;
   title: string;
+};
+
+type ChatMessageRole = keyof typeof MessageRole;
+
+type ChatMessageResponse = {
+  id: string;
+  role: ChatMessageRole;
+  text: string;
+  createdAt: string;
+};
+
+type ChatMessageRow = {
+  id: string;
+  role: ChatMessageRole;
+  content: string;
+  created_at: string;
+};
+
+type ChatMessagesResponse = {
+  mode: ChatModeValue;
+  isModeLocked: boolean;
+  messages: ChatMessageResponse[];
 };
 
 function toChatResponse(row: ChatRow): ChatResponse {
@@ -186,19 +208,80 @@ export async function deleteChat(chatId: string): Promise<boolean> {
   }
 }
 
+export async function getChatMessages(chatId: string): Promise<ChatMessagesResponse> {
+  const chatResult = await pool.query<
+    Pick<ChatRow, 'mode'> & {
+      id: string;
+      has_user_messages: boolean;
+    }
+  >(
+    `
+      SELECT
+        chats.id::text AS id,
+        chats.mode AS mode,
+        EXISTS (
+          SELECT 1
+          FROM chat_messages
+          WHERE chat_id = chats.id
+            AND role = '${MessageRole.user}'
+            AND deleted_at IS NULL
+        ) AS has_user_messages
+      FROM chats
+      WHERE chats.id = $1::bigint
+        AND chats.deleted_at IS NULL
+      LIMIT 1
+    `,
+    [chatId],
+  );
+
+  const chat = chatResult.rows[0];
+
+  if (!chat) {
+    throw new ApiError(404, 'Chat not found', 'CHAT_NOT_FOUND');
+  }
+
+  const messagesResult = await pool.query<ChatMessageRow>(
+    `
+      SELECT
+        id::text AS id,
+        role,
+        content,
+        created_at::text AS created_at
+      FROM chat_messages
+      WHERE chat_id = $1::bigint
+        AND deleted_at IS NULL
+      ORDER BY created_at ASC
+    `,
+    [chatId],
+  );
+
+  return {
+    mode: chat.mode,
+    isModeLocked: chat.has_user_messages,
+    messages: messagesResult.rows.map((row) => ({
+      id: row.id,
+      role: row.role,
+      text: row.content,
+      createdAt: row.created_at,
+    })),
+  };
+}
+
 export async function sendMessageToChat({ chatId, message, mode }: SendMessageArgs) {
   await pool.query('BEGIN');
   try {
     const chatResult = await pool.query<
       Pick<ChatRow, 'id' | 'title' | 'mode'> & {
+        project_id: string;
         has_user_messages: boolean;
       }
     >(
       `
         SELECT
-          id::text AS id,
-          title,
-          mode,
+          chats.id::text AS id,
+          chats.title AS title,
+          chats.mode AS mode,
+          epics.project_id::text AS project_id,
           EXISTS (
             SELECT 1
             FROM chat_messages
@@ -207,8 +290,10 @@ export async function sendMessageToChat({ chatId, message, mode }: SendMessageAr
               AND deleted_at IS NULL
           ) AS has_user_messages
         FROM chats
-        WHERE id = $1::bigint
-          AND deleted_at IS NULL
+        JOIN epics ON epics.id = chats.epic_id
+        WHERE chats.id = $1::bigint
+          AND chats.deleted_at IS NULL
+          AND epics.deleted_at IS NULL
         LIMIT 1
       `,
       [chatId],
