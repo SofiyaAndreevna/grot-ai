@@ -60,12 +60,6 @@ export const fallbackAssistantMessage: ChatMessage = {
   text: 'Выберите чат внутри эпика и задайте вопрос по проекту.',
 }
 
-const createInitialAssistantMessage = (): ChatMessage => ({
-  id: crypto.randomUUID(),
-  role: 'assistant',
-  text: fallbackAssistantMessage.text,
-})
-
 const buildChatStorageKey = (projectId: string, chatId: string) => `${projectId}:${chatId}`
 
 const allChatKeys = seedProjects.flatMap((project) =>
@@ -74,7 +68,7 @@ const allChatKeys = seedProjects.flatMap((project) =>
 
 export const buildInitialMessagesByChat = () =>
   Object.fromEntries(
-    allChatKeys.map((chatKey) => [chatKey, [createInitialAssistantMessage()]]),
+    allChatKeys.map((chatKey) => [chatKey, []]),
   ) as Record<string, ChatMessage[]>
 
 export const buildChatKey = (projectId: string, chatId: string) => `${projectId}:${chatId}`
