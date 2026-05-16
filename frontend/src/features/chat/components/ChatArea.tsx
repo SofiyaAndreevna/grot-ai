@@ -1,15 +1,18 @@
-import type { FormEvent } from 'react'
+import { useEffect, useRef, type FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import type { ChatMessage, ChatMode } from '../types'
+import './ChatArea.css'
 
 type ChatAreaProps = {
   activeEpicTitle: string
   activeChatTitle: string
   chatMode: ChatMode
   isChatModeLocked: boolean
+  isChatModeConfirmed: boolean
   onChatModeChange: (mode: ChatMode) => void
+  onChatModeConfirm: () => void
   messages: ChatMessage[]
   isMessagesLoading: boolean
   isLoading: boolean
@@ -23,7 +26,9 @@ export const ChatArea = ({
   activeChatTitle,
   chatMode,
   isChatModeLocked,
+  isChatModeConfirmed,
   onChatModeChange,
+  onChatModeConfirm,
   messages,
   isMessagesLoading,
   isLoading,
@@ -31,32 +36,61 @@ export const ChatArea = ({
   onInputChange,
   onSubmit,
 }: ChatAreaProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const isModeSetupVisible =
+    !isMessagesLoading && !isChatModeConfirmed && !isChatModeLocked && messages.length === 0
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) {
+      return
+    }
+
+    textarea.style.height = 'auto'
+    const nextHeight = Math.min(textarea.scrollHeight, 210)
+    textarea.style.height = `${nextHeight}px`
+    textarea.style.overflowY = textarea.scrollHeight > 210 ? 'auto' : 'hidden'
+  }, [input])
+
   return (
     <section className="chat-area">
       <header className="chat-header">
         <p className="chat-meta">Эпик: {activeEpicTitle}</p>
         <h2 className="chat-topic">Тема: {activeChatTitle}</h2>
-        <div className="mode-switch">
-          <button
-            type="button"
-            className={`mode-button ${chatMode === 'analyst' ? 'active' : ''}`}
-            onClick={() => onChatModeChange('analyst')}
-            disabled={isChatModeLocked}
-          >
-            Для аналитика
-          </button>
-          <button
-            type="button"
-            className={`mode-button ${chatMode === 'developer' ? 'active' : ''}`}
-            onClick={() => onChatModeChange('developer')}
-            disabled={isChatModeLocked}
-          >
-            Для разработчика
-          </button>
+        <div className="mode-chip">
+          Режим: {chatMode === 'analyst' ? 'аналитик' : 'разработчик'}
         </div>
       </header>
 
-      <div className="messages">
+      <div className={`messages ${isModeSetupVisible ? 'messages-mode-setup' : ''}`}>
+        {isModeSetupVisible && (
+          <form
+            className="mode-setup-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              onChatModeConfirm()
+            }}
+          >
+            <label htmlFor="chat-mode-select">Выберите режим перед первым сообщением</label>
+            <p className="mode-setup-note">
+              После первого сообщения режим менять нельзя, поэтому сохраните нужный вариант.
+            </p>
+            <div className="mode-setup-controls">
+              <select
+                id="chat-mode-select"
+                value={chatMode}
+                onChange={(event) => onChatModeChange(event.target.value as ChatMode)}
+                disabled={isMessagesLoading || isLoading}
+              >
+                <option value="analyst">Аналитик</option>
+                <option value="developer">Разработчик</option>
+              </select>
+              <button type="submit" disabled={isMessagesLoading || isLoading}>
+                Сохранить
+              </button>
+            </div>
+          </form>
+        )}
         {messages.map((message) => (
           <div key={message.id} className={`message ${message.role}`}>
             {message.role === 'assistant' ? (
@@ -82,17 +116,27 @@ export const ChatArea = ({
         {isLoading && <div className="message assistant">Печатает...</div>}
       </div>
 
-      <form className="chat-form" onSubmit={onSubmit}>
-        <input
-          value={input}
-          onChange={(event) => onInputChange(event.target.value)}
-          placeholder={`Задайте вопрос в режиме "${chatMode === 'analyst' ? 'аналитик' : 'разработчик'}"...`}
-          disabled={isLoading || isMessagesLoading}
-        />
-        <button type="submit" disabled={isLoading || isMessagesLoading || !input.trim()}>
-          Отправить
-        </button>
-      </form>
+      {isChatModeConfirmed && (
+        <form className="chat-form" onSubmit={onSubmit}>
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(event) => onInputChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault()
+                event.currentTarget.form?.requestSubmit()
+              }
+            }}
+            placeholder={`Задайте вопрос в режиме "${chatMode === 'analyst' ? 'аналитик' : 'разработчик'}"...`}
+            disabled={isLoading || isMessagesLoading}
+            rows={1}
+          />
+          <button type="submit" disabled={isLoading || isMessagesLoading || !input.trim()}>
+            Отправить
+          </button>
+        </form>
+      )}
     </section>
   )
 }

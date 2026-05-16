@@ -21,7 +21,9 @@ export const AppContent = ({
   const {
     chatMode,
     isChatModeLocked,
+    isChatModeConfirmed,
     setChatMode,
+    confirmChatMode,
     input,
     setInput,
     isLoading,
@@ -98,7 +100,9 @@ export const AppContent = ({
       activeChatTitle={activeChatTitle}
       chatMode={chatMode}
       isChatModeLocked={isChatModeLocked}
+      isChatModeConfirmed={isChatModeConfirmed}
       onChatModeChange={setChatMode}
+      onChatModeConfirm={confirmChatMode}
       messages={activeChatMessages}
       isMessagesLoading={isMessagesLoading}
       isLoading={isLoading}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 
-import { buildChatKey, buildInitialMessagesByChat, fallbackAssistantMessage } from '../constants'
+import { buildChatKey, buildInitialMessagesByChat } from '../constants'
 import { fetchChatMessages, sendChatMessage } from '../api'
 import type { ChatMessage, ChatMode } from '../types'
 
@@ -13,11 +13,13 @@ type UseChatStateParams = {
 type ChatSettings = {
   mode: ChatMode
   isModeLocked: boolean
+  isModeConfirmed: boolean
 }
 
 const defaultChatSettings: ChatSettings = {
   mode: 'analyst',
   isModeLocked: false,
+  isModeConfirmed: false,
 }
 
 export const useChatState = ({
@@ -34,8 +36,9 @@ export const useChatState = ({
   const activeChatSettings = chatSettingsByChat[activeChatKey] ?? defaultChatSettings
   const chatMode = activeChatSettings.mode
   const isChatModeLocked = activeChatSettings.isModeLocked
+  const isChatModeConfirmed = activeChatSettings.isModeConfirmed
 
-  const activeChatMessages = messagesByChat[activeChatKey] ?? [fallbackAssistantMessage]
+  const activeChatMessages = messagesByChat[activeChatKey] ?? []
 
   useEffect(() => {
     let isCancelled = false
@@ -55,13 +58,14 @@ export const useChatState = ({
 
         setMessagesByChat((prev) => ({
           ...prev,
-          [activeChatKey]: payload.messages.length > 0 ? payload.messages : [fallbackAssistantMessage],
+          [activeChatKey]: payload.messages,
         }))
         setChatSettingsByChat((prev) => ({
           ...prev,
           [activeChatKey]: {
             mode: payload.mode,
             isModeLocked: payload.isModeLocked,
+            isModeConfirmed: payload.messages.length > 0,
           },
         }))
       } catch {
@@ -71,7 +75,7 @@ export const useChatState = ({
 
         setMessagesByChat((prev) => ({
           ...prev,
-          [activeChatKey]: prev[activeChatKey] ?? [fallbackAssistantMessage],
+          [activeChatKey]: prev[activeChatKey] ?? [],
         }))
       } finally {
         if (!isCancelled) {
@@ -97,6 +101,22 @@ export const useChatState = ({
       [activeChatKey]: {
         mode,
         isModeLocked: false,
+        isModeConfirmed: activeChatSettings.isModeConfirmed,
+      },
+    }))
+  }
+
+  const confirmChatMode = () => {
+    if (isChatModeLocked) {
+      return
+    }
+
+    setChatSettingsByChat((prev) => ({
+      ...prev,
+      [activeChatKey]: {
+        mode: activeChatSettings.mode,
+        isModeLocked: false,
+        isModeConfirmed: true,
       },
     }))
   }
@@ -112,6 +132,9 @@ export const useChatState = ({
     const targetChatKey = buildChatKey(activeProjectId, activeChatId)
     const targetChatId = activeChatId
     const targetChatSettings = chatSettingsByChat[targetChatKey] ?? defaultChatSettings
+    if (!targetChatSettings.isModeConfirmed) {
+      return
+    }
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
@@ -144,6 +167,7 @@ export const useChatState = ({
         [targetChatKey]: {
           mode: targetChatSettings.mode,
           isModeLocked: true,
+          isModeConfirmed: true,
         },
       }))
     } catch {
@@ -166,7 +190,9 @@ export const useChatState = ({
   return {
     chatMode,
     isChatModeLocked,
+    isChatModeConfirmed,
     setChatMode: handleChatModeChange,
+    confirmChatMode,
     input,
     setInput,
     isLoading,
