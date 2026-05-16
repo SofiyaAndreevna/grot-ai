@@ -1,0 +1,23 @@
+{
+  "name": "mcp-github-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server for GitHub repository context retrieval",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.2"
+  }
+}
