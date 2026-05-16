@@ -1,4 +1,4 @@
-import type { ChatMessage, ChatMode, Epic, EpicChat, Project } from '../types'
+import type { ChatMessage, ChatMode, ChatScenario, Epic, EpicChat, Project } from '../types'
 
 type EpicDto = {
   id: string
@@ -47,6 +47,7 @@ type ChatMessageDto = {
 
 type ChatMessagesResponseDto = {
   mode: ChatMode
+  scenario: ChatScenario
   isModeLocked: boolean
   messages: ChatMessageDto[]
 }
@@ -239,7 +240,12 @@ export const deleteChat = async (chatId: string): Promise<void> => {
   }
 }
 
-export const sendChatMessage = async (chatId: string, message: string, mode: ChatMode) => {
+export const sendChatMessage = async (
+  chatId: string,
+  message: string,
+  mode: ChatMode,
+  scenario: ChatScenario,
+) => {
   const response = await fetch(`/api/chats/${encodeURIComponent(chatId)}/messages`, {
     method: 'POST',
     headers: {
@@ -248,6 +254,7 @@ export const sendChatMessage = async (chatId: string, message: string, mode: Cha
     body: JSON.stringify({
       message,
       mode,
+      scenario,
       role: mode,
     }),
   })
@@ -263,6 +270,7 @@ export const fetchChatMessages = async (
   chatId: string,
 ): Promise<{
   mode: ChatMode
+  scenario: ChatScenario
   isModeLocked: boolean
   messages: ChatMessage[]
 }> => {
@@ -274,6 +282,7 @@ export const fetchChatMessages = async (
   const payload = (await response.json()) as ChatMessagesResponseDto
   return {
     mode: payload.mode,
+    scenario: payload.scenario,
     isModeLocked: payload.isModeLocked,
     messages: payload.messages.map((message) => ({
       id: message.id,

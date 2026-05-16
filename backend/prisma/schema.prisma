@@ -9,16 +9,13 @@ datasource db {
 }
 
 model assistant_message_sources {
-  id                                                                                                              BigInt                   @id @default(autoincrement())
-  assistant_message_id                                                                                            BigInt
-  context_document_id                                                                                             BigInt
-  context_chunk_id                                                                                                BigInt?
-  source_order                                                                                                    Int                      @default(0)
-  created_at                                                                                                      DateTime                 @default(now()) @db.Timestamptz(6)
-  chat_messages                                                                                                   chat_messages            @relation(fields: [assistant_message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  context_document_chunks_assistant_message_sources_context_chunk_idTocontext_document_chunks                     context_document_chunks? @relation("assistant_message_sources_context_chunk_idTocontext_document_chunks", fields: [context_chunk_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  context_documents                                                                                               context_documents        @relation(fields: [context_document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  context_document_chunks_assistant_message_sources_context_document_id_context_chunk_idTocontext_document_chunks context_document_chunks? @relation("assistant_message_sources_context_document_id_context_chunk_idTocontext_document_chunks", fields: [context_document_id, context_chunk_id], references: [document_id, id], onDelete: NoAction, onUpdate: NoAction, map: "assistant_message_sources_document_chunk_fk")
+  id                   BigInt        @id @default(autoincrement())
+  assistant_message_id BigInt
+  context_document_id  BigInt
+  context_chunk_id     BigInt?
+  source_order         Int           @default(0)
+  created_at           DateTime      @default(now()) @db.Timestamptz(6)
+  chat_messages        chat_messages @relation(fields: [assistant_message_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([assistant_message_id, context_chunk_id], map: "assistant_message_sources_unique")
   @@index([assistant_message_id])
@@ -52,6 +49,7 @@ model chats {
   created_at    DateTime        @default(now()) @db.Timestamptz(6)
   updated_at    DateTime        @default(now()) @db.Timestamptz(6)
   deleted_at    DateTime?       @db.Timestamptz(6)
+  scenario      String          @default("code_qa")
   chat_messages chat_messages[]
   epics         epics           @relation(fields: [epic_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   llm_requests  llm_requests[]
@@ -60,60 +58,16 @@ model chats {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
-model context_document_chunks {
-  id                                                                                                                BigInt                      @id @default(autoincrement())
-  document_id                                                                                                       BigInt
-  chunk_index                                                                                                       Int
-  content_text                                                                                                      String
-  start_line                                                                                                        Int?
-  end_line                                                                                                          Int?
-  created_at                                                                                                        DateTime                    @default(now()) @db.Timestamptz(6)
-  deleted_at                                                                                                        DateTime?                   @db.Timestamptz(6)
-  assistant_message_sources_assistant_message_sources_context_chunk_idTocontext_document_chunks                     assistant_message_sources[] @relation("assistant_message_sources_context_chunk_idTocontext_document_chunks")
-  assistant_message_sources_assistant_message_sources_context_document_id_context_chunk_idTocontext_document_chunks assistant_message_sources[] @relation("assistant_message_sources_context_document_id_context_chunk_idTocontext_document_chunks")
-  context_documents                                                                                                 context_documents           @relation(fields: [document_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@unique([document_id, id], map: "context_document_chunks_document_id_id_unique")
-  @@unique([document_id, chunk_index], map: "context_document_chunks_document_index_active_unique_idx", where: raw("(deleted_at IS NULL)"))
-  @@index([document_id], where: raw("(deleted_at IS NULL)"))
-}
-
-model context_documents {
-  id                        BigInt                      @id @default(autoincrement())
-  project_id                BigInt
-  source_id                 BigInt
-  uploaded_file_id          BigInt?
-  title                     String
-  source_uri                String?
-  file_path                 String?
-  language                  String?
-  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
-  updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
-  deleted_at                DateTime?                   @db.Timestamptz(6)
-  assistant_message_sources assistant_message_sources[]
-  context_document_chunks   context_document_chunks[]
-  projects                  projects                    @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  context_sources           context_sources             @relation(fields: [source_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  uploaded_files            uploaded_files?             @relation(fields: [uploaded_file_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-
-  @@index([project_id], where: raw("(deleted_at IS NULL)"))
-  @@index([source_id], where: raw("(deleted_at IS NULL)"))
-  @@index([uploaded_file_id], where: raw("((uploaded_file_id IS NOT NULL) AND (deleted_at IS NULL))"))
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model context_sources {
-  id                BigInt              @id @default(autoincrement())
-  project_id        BigInt
-  type              String
-  name              String
-  url               String?
-  created_at        DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
-  deleted_at        DateTime?           @db.Timestamptz(6)
-  context_documents context_documents[]
-  projects          projects            @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id         BigInt    @id @default(autoincrement())
+  project_id BigInt
+  type       String
+  name       String
+  url        String?
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  deleted_at DateTime? @db.Timestamptz(6)
+  projects   projects  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@unique([project_id, type, url], map: "context_sources_project_type_url_active_unique_idx", where: raw("((deleted_at IS NULL) AND (url IS NOT NULL))"))
   @@index([project_id], where: raw("(deleted_at IS NULL)"))
@@ -131,18 +85,6 @@ model epics {
   projects   projects  @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([project_id], where: raw("(deleted_at IS NULL)"))
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model integration_accounts {
-  id                     BigInt    @id @default(autoincrement())
-  provider               String
-  account_name           String
-  base_url               String?
-  encrypted_access_token String
-  created_at             DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime  @default(now()) @db.Timestamptz(6)
-  deleted_at             DateTime? @db.Timestamptz(6)
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -170,29 +112,31 @@ model llm_requests {
 
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model projects {
-  id                BigInt              @id @default(autoincrement())
-  name              String
-  created_at        DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
-  deleted_at        DateTime?           @db.Timestamptz(6)
-  context_documents context_documents[]
-  context_sources   context_sources[]
-  epics             epics[]
-  uploaded_files    uploaded_files[]
+  id              BigInt            @id @default(autoincrement())
+  name            String
+  created_at      DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime          @default(now()) @db.Timestamptz(6)
+  deleted_at      DateTime?         @db.Timestamptz(6)
+  context_sources context_sources[]
+  epics           epics[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-model uploaded_files {
-  id                BigInt              @id @default(autoincrement())
-  project_id        BigInt
-  original_filename String
-  file_type         String?
-  size_bytes        BigInt?
-  storage_key       String              @unique(map: "uploaded_files_storage_key_active_unique_idx", where: raw("(deleted_at IS NULL)"))
-  uploaded_at       DateTime            @default(now()) @db.Timestamptz(6)
-  deleted_at        DateTime?           @db.Timestamptz(6)
-  context_documents context_documents[]
-  projects          projects            @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+model prompt_templates {
+  id            BigInt    @id @default(autoincrement())
+  code          String
+  template_type String    @unique(map: "prompt_templates_one_active_system_idx", where: raw("((template_type = 'system'::text) AND (status = 'active'::text) AND (deleted_at IS NULL))"))
+  scenario      String?
+  mode          String?
+  version       Int       @default(1)
+  content_md_en String
+  content_md_ru String
+  status        String    @default("draft")
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  activated_at  DateTime? @db.Timestamptz(6)
+  deleted_at    DateTime? @db.Timestamptz(6)
 
-  @@index([project_id], where: raw("(deleted_at IS NULL)"))
+  @@unique([code, version], map: "prompt_templates_code_version_unique_idx", where: raw("(deleted_at IS NULL)"))
+  @@unique([scenario, mode], map: "prompt_templates_one_active_scenario_mode_idx", where: raw("((template_type = 'scenario_mode'::text) AND (status = 'active'::text) AND (deleted_at IS NULL))"))
+  @@index([template_type, scenario, mode, status], map: "prompt_templates_active_lookup_idx", where: raw("(deleted_at IS NULL)"))
 }

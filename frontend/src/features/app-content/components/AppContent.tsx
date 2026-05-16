@@ -20,9 +20,11 @@ export const AppContent = ({
 }: AppContentProps) => {
   const {
     chatMode,
+    chatScenario,
     isChatModeLocked,
     isChatModeConfirmed,
     setChatMode,
+    setChatScenario,
     confirmChatMode,
     input,
     setInput,
@@ -99,9 +101,11 @@ export const AppContent = ({
       activeEpicTitle={activeEpicTitle}
       activeChatTitle={activeChatTitle}
       chatMode={chatMode}
+      chatScenario={chatScenario}
       isChatModeLocked={isChatModeLocked}
       isChatModeConfirmed={isChatModeConfirmed}
       onChatModeChange={setChatMode}
+      onChatScenarioChange={setChatScenario}
       onChatModeConfirm={confirmChatMode}
       messages={activeChatMessages}
       isMessagesLoading={isMessagesLoading}

@@ -26,3 +26,4 @@ export type Project = {
 }
 
 export type ChatMode = 'analyst' | 'developer'
+export type ChatScenario = 'questions' | 'feature_analysis'

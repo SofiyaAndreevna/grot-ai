@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 
 import { buildChatKey, buildInitialMessagesByChat } from '../constants'
 import { fetchChatMessages, sendChatMessage } from '../api'
-import type { ChatMessage, ChatMode } from '../types'
+import type { ChatMessage, ChatMode, ChatScenario } from '../types'
 
 type UseChatStateParams = {
   activeProjectId: string
@@ -12,12 +12,14 @@ type UseChatStateParams = {
 
 type ChatSettings = {
   mode: ChatMode
+  scenario: ChatScenario
   isModeLocked: boolean
   isModeConfirmed: boolean
 }
 
 const defaultChatSettings: ChatSettings = {
   mode: 'analyst',
+  scenario: 'questions',
   isModeLocked: false,
   isModeConfirmed: false,
 }
@@ -35,6 +37,7 @@ export const useChatState = ({
   const activeChatKey = buildChatKey(activeProjectId, activeChatId)
   const activeChatSettings = chatSettingsByChat[activeChatKey] ?? defaultChatSettings
   const chatMode = activeChatSettings.mode
+  const chatScenario = activeChatSettings.scenario
   const isChatModeLocked = activeChatSettings.isModeLocked
   const isChatModeConfirmed = activeChatSettings.isModeConfirmed
 
@@ -64,6 +67,7 @@ export const useChatState = ({
           ...prev,
           [activeChatKey]: {
             mode: payload.mode,
+            scenario: payload.scenario,
             isModeLocked: payload.isModeLocked,
             isModeConfirmed: payload.messages.length > 0,
           },
@@ -100,6 +104,23 @@ export const useChatState = ({
       ...prev,
       [activeChatKey]: {
         mode,
+        scenario: activeChatSettings.scenario,
+        isModeLocked: false,
+        isModeConfirmed: activeChatSettings.isModeConfirmed,
+      },
+    }))
+  }
+
+  const handleChatScenarioChange = (scenario: ChatScenario) => {
+    if (isChatModeLocked) {
+      return
+    }
+
+    setChatSettingsByChat((prev) => ({
+      ...prev,
+      [activeChatKey]: {
+        mode: activeChatSettings.mode,
+        scenario,
         isModeLocked: false,
         isModeConfirmed: activeChatSettings.isModeConfirmed,
       },
@@ -115,6 +136,7 @@ export const useChatState = ({
       ...prev,
       [activeChatKey]: {
         mode: activeChatSettings.mode,
+        scenario: activeChatSettings.scenario,
         isModeLocked: false,
         isModeConfirmed: true,
       },
@@ -150,7 +172,12 @@ export const useChatState = ({
     setIsLoading(true)
 
     try {
-      const data = await sendChatMessage(targetChatId, trimmedInput, targetChatSettings.mode)
+      const data = await sendChatMessage(
+        targetChatId,
+        trimmedInput,
+        targetChatSettings.mode,
+        targetChatSettings.scenario,
+      )
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -166,6 +193,7 @@ export const useChatState = ({
         ...prev,
         [targetChatKey]: {
           mode: targetChatSettings.mode,
+          scenario: targetChatSettings.scenario,
           isModeLocked: true,
           isModeConfirmed: true,
         },
@@ -189,9 +217,11 @@ export const useChatState = ({
 
   return {
     chatMode,
+    chatScenario,
     isChatModeLocked,
     isChatModeConfirmed,
     setChatMode: handleChatModeChange,
+    setChatScenario: handleChatScenarioChange,
     confirmChatMode,
     input,
     setInput,

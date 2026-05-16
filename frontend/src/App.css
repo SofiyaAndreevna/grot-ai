@@ -322,6 +322,7 @@
   padding: 6px 12px;
   color: #d2dbee;
   background: #20283a;
+  margin-right: 8px;
 }
 
 @media (max-width: 900px) {

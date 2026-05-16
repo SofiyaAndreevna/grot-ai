@@ -26,6 +26,7 @@ type GitHubAnswerPayload = {
   };
   message: string;
   mode: string;
+  scenario: string;
 };
 
 type McpToolTextContent = {
@@ -148,10 +149,12 @@ export async function askGithubContext({
   message,
   githubUrls,
   mode,
+  scenario,
 }: {
   message: string;
   githubUrls: string[];
   mode: string;
+  scenario: string;
 }): Promise<GithubContextReply> {
   const requestTimeoutMs = resolveMcpRequestTimeoutMs();
   const payload: GitHubAnswerPayload = {
@@ -160,6 +163,7 @@ export async function askGithubContext({
     },
     message,
     mode,
+    scenario,
   };
 
   const mcpScriptPath = resolveMcpScriptPath();

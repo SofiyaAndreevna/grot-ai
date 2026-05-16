@@ -19,6 +19,8 @@ import { asTextResponse } from "../text-response.js";
 
 const CHAT_MODES = ["analyst", "developer"] as const;
 type ChatMode = (typeof CHAT_MODES)[number];
+const CHAT_SCENARIOS = ["questions", "feature_analysis"] as const;
+type ChatScenario = (typeof CHAT_SCENARIOS)[number];
 const CHAT_ROLES = ["user", "assistant", "system"] as const;
 
 const webSourceSchema = z.object({
@@ -39,15 +41,23 @@ const chatMessageSchema = z.object({
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const promptDir = path.join(projectRoot, "src", "promt");
 const baseSystemPrompt = readFileSync(
-  path.join(promptDir, "GROT_SYSTEM_PROMPT_EN.md"),
+  path.join(promptDir, "system_prompt.md"),
   "utf8",
 ).trim();
-const analystModePrompt = readFileSync(
-  path.join(promptDir, "GROT_ANALYST_MODE_EN.md"),
+const questionsAnalystPrompt = readFileSync(
+  path.join(promptDir, "questions_analyst.md"),
   "utf8",
 ).trim();
-const developerModePrompt = readFileSync(
-  path.join(promptDir, "GROT_DEVELOPER_MODE_EN.md"),
+const questionsDeveloperPrompt = readFileSync(
+  path.join(promptDir, "questions_developer.md"),
+  "utf8",
+).trim();
+const featureAnalysisAnalystPrompt = readFileSync(
+  path.join(promptDir, "feature_analysis_analyst.md"),
+  "utf8",
+).trim();
+const featureAnalysisDeveloperPrompt = readFileSync(
+  path.join(promptDir, "feature_analysis_developer.md"),
   "utf8",
 ).trim();
 
@@ -77,9 +87,20 @@ function buildAnswerLengthInstruction(): string {
   return `Final answer must be at most ${MAX_CLAUDE_ANSWER_CHARS} characters. Count all visible characters, including spaces and punctuation.`;
 }
 
-function resolveSystemPrompt(mode: ChatMode): string {
-  const rolePrompt = mode === "developer" ? developerModePrompt : analystModePrompt;
-  return `${baseSystemPrompt}\n\n${rolePrompt}`.trim();
+function resolveScenarioPrompt(mode: ChatMode, scenario: ChatScenario): { name: string; content: string } {
+  if (scenario === "feature_analysis") {
+    return mode === "developer"
+      ? { name: "feature_analysis_developer.md", content: featureAnalysisDeveloperPrompt }
+      : { name: "feature_analysis_analyst.md", content: featureAnalysisAnalystPrompt };
+  }
+
+  return mode === "developer"
+    ? { name: "questions_developer.md", content: questionsDeveloperPrompt }
+    : { name: "questions_analyst.md", content: questionsAnalystPrompt };
+}
+
+function resolveSystemPrompt(mode: ChatMode, scenario: ChatScenario): string {
+  return `${baseSystemPrompt}\n\n${resolveScenarioPrompt(mode, scenario).content}`.trim();
 }
 
 function formatWebSearchSource(source: z.infer<typeof webSourceSchema>): string {
@@ -142,19 +163,16 @@ function buildChatMessagesBlock(chatMessages: z.infer<typeof chatMessageSchema>[
   return `<chat_messages>\n${payload}\n</chat_messages>\n\n`;
 }
 
-function buildMdFilesBlock(): string {
+function buildMdFilesBlock(mode: ChatMode, scenario: ChatScenario): string {
+  const scenarioPrompt = resolveScenarioPrompt(mode, scenario);
   return [
     "<md_files_content>",
-    '<file name="GROT_SYSTEM_PROMPT_EN.md">',
+    '<file name="system_prompt.md">',
     baseSystemPrompt,
     "</file>",
     "",
-    '<file name="GROT_ANALYST_MODE_EN.md">',
-    analystModePrompt,
-    "</file>",
-    "",
-    '<file name="GROT_DEVELOPER_MODE_EN.md">',
-    developerModePrompt,
+    `<file name="${scenarioPrompt.name}">`,
+    scenarioPrompt.content,
     "</file>",
     "</md_files_content>",
   ].join("\n");
@@ -408,6 +426,7 @@ async function executeClaudeGitHubTool(params: {
 
 function buildClaudeUserPrompt(params: {
   mode: ChatMode;
+  scenario: ChatScenario;
   message: string;
   task: string;
   repositoriesAccessBlock: string;
@@ -417,6 +436,7 @@ function buildClaudeUserPrompt(params: {
 }): string {
   const {
     mode,
+    scenario,
     message,
     task,
     repositoriesAccessBlock,
@@ -433,6 +453,10 @@ function buildClaudeUserPrompt(params: {
     mode,
     "</chat_mode>",
     "",
+    "<chat_scenario>",
+    scenario,
+    "</chat_scenario>",
+    "",
     "<user_question>",
     message,
     "</user_question>",
@@ -446,7 +470,7 @@ function buildClaudeUserPrompt(params: {
     "</web_search_results>",
     "",
     buildChatMessagesBlock(chatMessages).trimEnd(),
-    buildMdFilesBlock(),
+    buildMdFilesBlock(mode, scenario),
     "",
     "<repositories_access>",
     repositoriesAccessBlock,
@@ -471,6 +495,7 @@ export function registerClaudeTool(server: McpServer): void {
       }),
       message: z.string().min(1),
       mode: z.enum(CHAT_MODES).default("analyst"),
+      scenario: z.enum(CHAT_SCENARIOS).default("questions"),
       webSearchResults: z.array(webSearchResultSchema).max(30).optional(),
       chatMessages: z.array(chatMessageSchema).max(30).optional(),
       task: z
@@ -491,6 +516,7 @@ export function registerClaudeTool(server: McpServer): void {
       context,
       message,
       mode,
+      scenario,
       webSearchResults,
       chatMessages,
       task,
@@ -506,16 +532,18 @@ export function registerClaudeTool(server: McpServer): void {
       const allowedRepos = repoUrls.map((repoUrl) => parseGitHubRepoUrl(repoUrl));
       logClaudeProgress("Starting Claude request", {
         mode,
+        scenario,
         model,
         repositories: allowedRepos.map((repo) => `${repo.owner}/${repo.repo}`),
         maxTokens,
         maxToolRounds,
       });
       const repositoriesAccessBlock = buildRepositoryAccessBlock(allowedRepos);
-      const systemPrompt = resolveSystemPrompt(mode);
+      const systemPrompt = resolveSystemPrompt(mode, scenario);
       const allowedWebSources = buildAllowedWebSources(allowedRepos, context.webSearchSources);
       const userPrompt = buildClaudeUserPrompt({
         mode,
+        scenario,
         message,
         task,
         repositoriesAccessBlock,
