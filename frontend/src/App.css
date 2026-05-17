@@ -89,9 +89,13 @@
 .context-content-grid {
   padding: 16px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 14px;
   min-height: 0;
+}
+
+.context-content-grid.with-editor {
+  grid-template-columns: 1fr 1fr;
 }
 
 .context-records,
@@ -103,6 +107,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  width: 100%;
 }
 
 .context-panel-head {
@@ -116,6 +121,27 @@
 .context-panel-head h3,
 .context-editor h3 {
   margin: 0;
+}
+
+.context-editor-close-button {
+  min-width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #32466e;
+  background: #1a2742;
+  color: #98add9;
+  border-radius: 8px;
+  font-size: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.context-editor-close-button:hover {
+  border-color: #3d63ab;
+  background: #223558;
+  color: #d9e7ff;
 }
 
 .add-action.compact {
@@ -449,6 +475,10 @@
   }
 
   .context-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .context-content-grid.with-editor {
     grid-template-columns: 1fr;
   }
 }

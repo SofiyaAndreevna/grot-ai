@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { contextPlaceholderByType, contextTitleByType } from '../constants'
@@ -58,7 +58,14 @@ export const ContextScreen = ({
   const [isProjectTitleEditing, setIsProjectTitleEditing] = useState(false)
   const [isProjectRenaming, setIsProjectRenaming] = useState(false)
   const [projectRenameError, setProjectRenameError] = useState<string | null>(null)
+  const [isEditorVisible, setIsEditorVisible] = useState(false)
   const isProjectNameChanged = projectName.trim() !== projectTitle.trim()
+
+  useEffect(() => {
+    if (editingContextId) {
+      setIsEditorVisible(true)
+    }
+  }, [editingContextId])
 
   const startProjectTitleEditing = () => {
     setProjectName(projectTitle)
@@ -101,6 +108,21 @@ export const ContextScreen = ({
     }
   }
 
+  const handleCreateRecordClick = () => {
+    onResetEditor()
+    setIsEditorVisible(true)
+  }
+
+  const handleEditRecordClick = (record: ContextRecord) => {
+    onEditRecord(record)
+    setIsEditorVisible(true)
+  }
+
+  const handleCloseEditorClick = () => {
+    onResetEditor()
+    setIsEditorVisible(false)
+  }
+
   return (
     <section className="context-screen">
       <header className="context-header">
@@ -125,11 +147,11 @@ export const ContextScreen = ({
           ))}
         </nav>
 
-        <div className="context-content-grid">
+        <div className={`context-content-grid ${isEditorVisible ? 'with-editor' : ''}`}>
           <section className="context-records">
             <div className="context-panel-head">
               <h3>{activeContextType}</h3>
-              <button type="button" onClick={onResetEditor} className="add-action compact">
+              <button type="button" onClick={handleCreateRecordClick} className="add-action compact">
                 + Добавить запись
               </button>
             </div>
@@ -188,7 +210,7 @@ export const ContextScreen = ({
               <p className="context-empty">
                 {isContextSourcesLoading && activeContextType === 'GitHub'
                   ? 'Загружаем GitHub-источники...'
-                  : 'Записей пока нет. Добавьте первую запись справа.'}
+                  : 'Записей пока нет. Нажмите "+ Добавить запись", чтобы создать первую.'}
               </p>
             ) : (
               <div className="context-record-list">
@@ -197,7 +219,7 @@ export const ContextScreen = ({
                     <button
                       type="button"
                       className={`context-record-card ${editingContextId === record.id ? 'active' : ''}`}
-                      onClick={() => onEditRecord(record)}
+                      onClick={() => handleEditRecordClick(record)}
                     >
                       <span className="context-record-title">{record.title}</span>
                       <span className="context-record-date">Обновлено: {record.updatedAt}</span>
@@ -225,77 +247,89 @@ export const ContextScreen = ({
             ) : null}
           </section>
 
-          <section className="context-editor">
-            <h3>{editingContextId ? 'Редактирование записи' : 'Новая запись'}</h3>
-            <p>{contextTitleByType[activeContextType]}</p>
-            <form onSubmit={onSubmit}>
-              <label>
-                Заголовок
-                <input
-                  value={contextTitle}
-                  onChange={(event) => onContextTitleChange(event.target.value)}
-                  placeholder="Например: Основной репозиторий"
-                />
-              </label>
-
-              <label>
-                {isFilesType ? 'Загрузка файлов' : 'Контекст'}
-                {isFilesType ? (
-                  <div className="context-file-upload">
-                    <input type="file" multiple onChange={onFilesSelected} />
-                    {contextFiles.length > 0 ? (
-                      <ul className="context-file-list">
-                        {contextFiles.map((file) => (
-                          <li key={file.id}>
-                            <span>{file.name}</span>
-                            <button
-                              type="button"
-                              className="ghost-button"
-                              onClick={() => onRemoveFile(file.id)}
-                            >
-                              Удалить
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="context-file-empty">Пока не загружено ни одного файла.</p>
-                    )}
-                  </div>
-                ) : (
-                  <textarea
-                    value={contextContent}
-                    onChange={(event) => onContextContentChange(event.target.value)}
-                    placeholder={contextPlaceholderByType[activeContextType]}
-                    rows={8}
-                  />
-                )}
-              </label>
-
-              <div className="context-editor-actions">
-                <button type="button" className="ghost-button" onClick={onResetEditor}>
-                  Очистить
-                </button>
+          {isEditorVisible ? (
+            <section className="context-editor">
+              <div className="context-panel-head context-editor-head">
+                <h3>{editingContextId ? 'Редактирование записи' : 'Новая запись'}</h3>
                 <button
-                  type="submit"
-                  disabled={
-                    isSubmitting ||
-                    !contextTitle.trim() ||
-                    (isFilesType
-                      ? contextFiles.length === 0
-                      : !contextContent.trim())
-                  }
+                  type="button"
+                  className="ghost-button context-editor-close-button"
+                  onClick={handleCloseEditorClick}
+                  aria-label="Закрыть форму"
                 >
-                  {isSubmitting
-                    ? 'Сохраняем...'
-                    : editingContextId
-                      ? 'Сохранить изменения'
-                      : 'Добавить запись'}
+                  ×
                 </button>
               </div>
-              {submitError ? <p className="context-empty">{submitError}</p> : null}
-            </form>
-          </section>
+              <p>{contextTitleByType[activeContextType]}</p>
+              <form onSubmit={onSubmit}>
+                <label>
+                  Заголовок
+                  <input
+                    value={contextTitle}
+                    onChange={(event) => onContextTitleChange(event.target.value)}
+                    placeholder="Например: Основной репозиторий"
+                  />
+                </label>
+
+                <label>
+                  {isFilesType ? 'Загрузка файлов' : 'Контекст'}
+                  {isFilesType ? (
+                    <div className="context-file-upload">
+                      <input type="file" multiple onChange={onFilesSelected} />
+                      {contextFiles.length > 0 ? (
+                        <ul className="context-file-list">
+                          {contextFiles.map((file) => (
+                            <li key={file.id}>
+                              <span>{file.name}</span>
+                              <button
+                                type="button"
+                                className="ghost-button"
+                                onClick={() => onRemoveFile(file.id)}
+                              >
+                                Удалить
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="context-file-empty">Пока не загружено ни одного файла.</p>
+                      )}
+                    </div>
+                  ) : (
+                    <textarea
+                      value={contextContent}
+                      onChange={(event) => onContextContentChange(event.target.value)}
+                      placeholder={contextPlaceholderByType[activeContextType]}
+                      rows={8}
+                    />
+                  )}
+                </label>
+
+                <div className="context-editor-actions">
+                  <button type="button" className="ghost-button" onClick={onResetEditor}>
+                    Очистить
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={
+                      isSubmitting ||
+                      !contextTitle.trim() ||
+                      (isFilesType
+                        ? contextFiles.length === 0
+                        : !contextContent.trim())
+                    }
+                  >
+                    {isSubmitting
+                      ? 'Сохраняем...'
+                      : editingContextId
+                        ? 'Сохранить изменения'
+                        : 'Добавить запись'}
+                  </button>
+                </div>
+                {submitError ? <p className="context-empty">{submitError}</p> : null}
+              </form>
+            </section>
+          ) : null}
         </div>
       </div>
     </section>
