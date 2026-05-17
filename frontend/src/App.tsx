@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 import './App.css'
 import { AppContent } from '@/features/app-content'
-import { fetchProjects } from '@/features/chat'
+import { fetchProjects, updateProject } from '@/features/chat'
 import type { Project } from '@/features/chat'
 import { Sidebar } from '@/features/navigation'
 import {
@@ -56,6 +56,21 @@ function App() {
   const activeEpicId = activeEpic?.id ?? ''
   const activeChatId = activeChat?.id ?? ''
 
+  const handleProjectRename = async (projectId: string, nextProjectTitle: string) => {
+    const renamedProject = await updateProject(projectId, nextProjectTitle)
+
+    setProjects((previousProjects) =>
+      previousProjects.map((project) =>
+        project.id === projectId
+          ? {
+              ...project,
+              title: renamedProject.title,
+            }
+          : project,
+      ),
+    )
+  }
+
   useEffect(() => {
     if (!activeProject) {
       return
@@ -105,10 +120,12 @@ function App() {
 
       <AppContent
         activeProjectId={activeProject?.id ?? ''}
+        activeProjectTitle={activeProject?.title ?? ''}
         activeProjectSection={activeProjectSection}
         activeEpicTitle={activeEpic?.title ?? ''}
         activeChatId={activeChatId}
         activeChatTitle={activeChat?.title ?? ''}
+        onRenameProject={handleProjectRename}
       />
     </main>
   )

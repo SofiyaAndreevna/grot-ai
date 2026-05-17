@@ -129,6 +129,107 @@
   color: #8f9ab3;
 }
 
+.context-project-title-form {
+  border: 1px solid #313d56;
+  border-radius: 10px;
+  background: #222c40;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.context-project-title-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #d8e0f1;
+  font-size: 14px;
+}
+
+.context-project-title-view {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.context-project-title-label {
+  margin: 0;
+  color: #d8e0f1;
+  font-size: 14px;
+}
+
+.context-project-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.context-project-title-value {
+  color: #e8ebf2;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-project-title-edit-button {
+  border: 1px solid #40557f;
+  background: transparent;
+  color: #d6deef;
+  border-radius: 8px;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+
+.context-project-title-edit-button:hover {
+  border-color: #4d6393;
+  background: #1f2738;
+}
+
+.context-project-title-form form {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.context-project-title-form input {
+  width: 100%;
+  border: 1px solid #40557f;
+  background: #222b3d;
+  color: #e8ebf2;
+  border-radius: 10px;
+  padding: 10px 11px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.context-project-title-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.context-project-title-actions button {
+  border: 1px solid #2576ff;
+  background: #2576ff;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.context-project-title-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.context-project-title-actions .ghost-button {
+  border-color: #40557f;
+  background: transparent;
+  color: #d6deef;
+}
+
 .context-record-list {
   display: flex;
   flex-direction: column;

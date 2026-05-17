@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 
 import { contextPlaceholderByType, contextTitleByType } from '../constants'
@@ -8,6 +9,8 @@ type ContextScreenProps = {
   activeContextType: ContextType
   activeTypeRecords: ContextRecord[]
   editingContextId: string | null
+  projectTitle: string
+  onProjectRename: (nextProjectTitle: string) => Promise<void>
   contextTitle: string
   onContextTitleChange: (value: string) => void
   contextContent: string
@@ -30,6 +33,8 @@ export const ContextScreen = ({
   activeContextType,
   activeTypeRecords,
   editingContextId,
+  projectTitle,
+  onProjectRename,
   contextTitle,
   onContextTitleChange,
   contextContent,
@@ -48,6 +53,53 @@ export const ContextScreen = ({
   onDeleteRecord,
 }: ContextScreenProps) => {
   const isFilesType = activeContextType === ('Файлы' as unknown as ContextType)
+  const isDescriptionType = activeContextType === 'Описание'
+  const [projectName, setProjectName] = useState(projectTitle)
+  const [isProjectTitleEditing, setIsProjectTitleEditing] = useState(false)
+  const [isProjectRenaming, setIsProjectRenaming] = useState(false)
+  const [projectRenameError, setProjectRenameError] = useState<string | null>(null)
+  const isProjectNameChanged = projectName.trim() !== projectTitle.trim()
+
+  const startProjectTitleEditing = () => {
+    setProjectName(projectTitle)
+    setProjectRenameError(null)
+    setIsProjectTitleEditing(true)
+  }
+
+  const cancelProjectTitleEditing = () => {
+    setProjectName(projectTitle)
+    setProjectRenameError(null)
+    setIsProjectTitleEditing(false)
+  }
+
+  const handleProjectRenameSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (isProjectRenaming) {
+      return
+    }
+
+    const trimmedProjectName = projectName.trim()
+    if (!trimmedProjectName || !isProjectNameChanged) {
+      setIsProjectTitleEditing(false)
+      return
+    }
+
+    setProjectRenameError(null)
+    setIsProjectRenaming(true)
+
+    try {
+      await onProjectRename(trimmedProjectName)
+      setProjectName(trimmedProjectName)
+      setIsProjectTitleEditing(false)
+    } catch (error) {
+      setProjectRenameError(
+        error instanceof Error ? error.message : 'Не удалось обновить название проекта.',
+      )
+    } finally {
+      setIsProjectRenaming(false)
+    }
+  }
 
   return (
     <section className="context-screen">
@@ -81,6 +133,56 @@ export const ContextScreen = ({
                 + Добавить запись
               </button>
             </div>
+
+            {isDescriptionType ? (
+              <div className="context-project-title-form">
+                <div className="context-project-title-view">
+                  <p className="context-project-title-label">Название проекта</p>
+                  {!isProjectTitleEditing ? (
+                    <div className="context-project-title-row">
+                      <span className="context-project-title-value">{projectTitle}</span>
+                      <button
+                        type="button"
+                        className="context-project-title-edit-button"
+                        aria-label="Редактировать название проекта"
+                        onClick={startProjectTitleEditing}
+                        disabled={isProjectRenaming}
+                      >
+                        ✎
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+
+                {isProjectTitleEditing ? (
+                  <form onSubmit={handleProjectRenameSubmit}>
+                    <input
+                      value={projectName}
+                      onChange={(event) => setProjectName(event.target.value)}
+                      placeholder="Введите название проекта"
+                      disabled={isProjectRenaming}
+                    />
+                    <div className="context-project-title-actions">
+                      <button
+                        type="submit"
+                        disabled={isProjectRenaming || !projectName.trim() || !isProjectNameChanged}
+                      >
+                        {isProjectRenaming ? 'Сохраняем...' : 'Сохранить название'}
+                      </button>
+                      <button
+                        type="button"
+                        className="ghost-button"
+                        onClick={cancelProjectTitleEditing}
+                        disabled={isProjectRenaming}
+                      >
+                        Отмена
+                      </button>
+                    </div>
+                    {projectRenameError ? <p className="context-empty">{projectRenameError}</p> : null}
+                  </form>
+                ) : null}
+              </div>
+            ) : null}
 
             {activeTypeRecords.length === 0 ? (
               <p className="context-empty">

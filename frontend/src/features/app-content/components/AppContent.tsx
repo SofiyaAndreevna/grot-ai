@@ -5,18 +5,22 @@ import { isContextSection } from '@/features/navigation'
 
 type AppContentProps = {
   activeProjectId: string
+  activeProjectTitle: string
   activeProjectSection: ProjectSection
   activeEpicTitle: string
   activeChatId: string
   activeChatTitle: string
+  onRenameProject: (projectId: string, nextProjectTitle: string) => Promise<void>
 }
 
 export const AppContent = ({
   activeProjectId,
+  activeProjectTitle,
   activeProjectSection,
   activeEpicTitle,
   activeChatId,
   activeChatTitle,
+  onRenameProject,
 }: AppContentProps) => {
   const {
     chatMode,
@@ -62,9 +66,12 @@ export const AppContent = ({
   if (isContextSection(activeProjectSection)) {
     return (
       <ContextScreen
+        key={activeProjectId}
         activeContextType={activeContextType}
         activeTypeRecords={activeTypeRecords}
         editingContextId={editingContextId}
+        projectTitle={activeProjectTitle}
+        onProjectRename={(nextProjectTitle) => onRenameProject(activeProjectId, nextProjectTitle)}
         contextTitle={contextTitle}
         onContextTitleChange={setContextTitle}
         contextContent={contextContent}
