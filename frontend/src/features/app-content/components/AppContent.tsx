@@ -5,24 +5,30 @@ import { isContextSection } from '@/features/navigation'
 
 type AppContentProps = {
   activeProjectId: string
+  activeProjectTitle: string
   activeProjectSection: ProjectSection
   activeEpicTitle: string
   activeChatId: string
   activeChatTitle: string
+  onRenameProject: (projectId: string, nextProjectTitle: string) => Promise<void>
 }
 
 export const AppContent = ({
   activeProjectId,
+  activeProjectTitle,
   activeProjectSection,
   activeEpicTitle,
   activeChatId,
   activeChatTitle,
+  onRenameProject,
 }: AppContentProps) => {
   const {
     chatMode,
+    chatScenario,
     isChatModeLocked,
     isChatModeConfirmed,
     setChatMode,
+    setChatScenario,
     confirmChatMode,
     input,
     setInput,
@@ -60,9 +66,12 @@ export const AppContent = ({
   if (isContextSection(activeProjectSection)) {
     return (
       <ContextScreen
+        key={activeProjectId}
         activeContextType={activeContextType}
         activeTypeRecords={activeTypeRecords}
         editingContextId={editingContextId}
+        projectTitle={activeProjectTitle}
+        onProjectRename={(nextProjectTitle) => onRenameProject(activeProjectId, nextProjectTitle)}
         contextTitle={contextTitle}
         onContextTitleChange={setContextTitle}
         contextContent={contextContent}
@@ -99,9 +108,11 @@ export const AppContent = ({
       activeEpicTitle={activeEpicTitle}
       activeChatTitle={activeChatTitle}
       chatMode={chatMode}
+      chatScenario={chatScenario}
       isChatModeLocked={isChatModeLocked}
       isChatModeConfirmed={isChatModeConfirmed}
       onChatModeChange={setChatMode}
+      onChatScenarioChange={setChatScenario}
       onChatModeConfirm={confirmChatMode}
       messages={activeChatMessages}
       isMessagesLoading={isMessagesLoading}

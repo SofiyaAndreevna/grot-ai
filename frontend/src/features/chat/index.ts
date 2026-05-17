@@ -22,4 +22,4 @@ export {
   buildChatKey,
 } from './constants'
 export { useChatState } from './hooks/useChatState'
-export type { ChatMessage, ChatMode, Epic, EpicChat, Project } from './types'
+export type { ChatMessage, ChatMode, ChatScenario, Epic, EpicChat, Project } from './types'

@@ -2,16 +2,18 @@ import { useEffect, useRef, type FormEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
-import type { ChatMessage, ChatMode } from '../types'
+import type { ChatMessage, ChatMode, ChatScenario } from '../types'
 import './ChatArea.css'
 
 type ChatAreaProps = {
   activeEpicTitle: string
   activeChatTitle: string
   chatMode: ChatMode
+  chatScenario: ChatScenario
   isChatModeLocked: boolean
   isChatModeConfirmed: boolean
   onChatModeChange: (mode: ChatMode) => void
+  onChatScenarioChange: (scenario: ChatScenario) => void
   onChatModeConfirm: () => void
   messages: ChatMessage[]
   isMessagesLoading: boolean
@@ -25,9 +27,11 @@ export const ChatArea = ({
   activeEpicTitle,
   activeChatTitle,
   chatMode,
+  chatScenario,
   isChatModeLocked,
   isChatModeConfirmed,
   onChatModeChange,
+  onChatScenarioChange,
   onChatModeConfirm,
   messages,
   isMessagesLoading,
@@ -60,6 +64,9 @@ export const ChatArea = ({
         <div className="mode-chip">
           Режим: {chatMode === 'analyst' ? 'аналитик' : 'разработчик'}
         </div>
+        <div className="mode-chip">
+          Сценарий: {chatScenario === 'questions' ? 'задать вопросы' : 'предложить изменения'}
+        </div>
       </header>
 
       <div className={`messages ${isModeSetupVisible ? 'messages-mode-setup' : ''}`}>
@@ -73,7 +80,7 @@ export const ChatArea = ({
           >
             <label htmlFor="chat-mode-select">Выберите режим перед первым сообщением</label>
             <p className="mode-setup-note">
-              После первого сообщения режим менять нельзя, поэтому сохраните нужный вариант.
+              После первого сообщения режим и сценарий менять нельзя, поэтому сохраните нужный вариант.
             </p>
             <div className="mode-setup-controls">
               <select
@@ -85,6 +92,15 @@ export const ChatArea = ({
                 <option value="analyst">Аналитик</option>
                 <option value="developer">Разработчик</option>
               </select>
+              <select
+                id="chat-scenario-select"
+                value={chatScenario}
+                onChange={(event) => onChatScenarioChange(event.target.value as ChatScenario)}
+                disabled={isMessagesLoading || isLoading}
+              >
+                <option value="questions">Задать вопросы</option>
+                <option value="feature_analysis">Предложить изменения</option>
+              </select>
               <button type="submit" disabled={isMessagesLoading || isLoading}>
                 Сохранить
               </button>
@@ -95,7 +111,16 @@ export const ChatArea = ({
           <div key={message.id} className={`message ${message.role}`}>
             {message.role === 'assistant' ? (
               <div className="message-markdown">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.text}</ReactMarkdown>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    a: ({ node: _node, ...props }) => (
+                      <a {...props} target="_blank" rel="noopener noreferrer" />
+                    ),
+                  }}
+                >
+                  {message.text}
+                </ReactMarkdown>
               </div>
             ) : (
               <p>{message.text}</p>

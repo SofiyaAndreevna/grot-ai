@@ -21,6 +21,7 @@ export const renameChatBodySchema = z.object({
 export const sendChatMessageBodySchema = z.object({
   message: z.string().trim().min(1),
   mode: z.enum(['analyst', 'developer']),
+  scenario: z.enum(['questions', 'feature_analysis']),
 });
 
 export const legacyChatBodySchema = z.object({
